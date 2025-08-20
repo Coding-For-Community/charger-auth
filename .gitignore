@@ -1,13 +1,13 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
-node_modules/
+mobile-app/node_modules/
 
 # Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+mobile-app/.expo/
+mobile-app/dist/
+mobile-app/web-build/
+mobile-app/expo-env.d.ts
 
 # Native
 .kotlin/
@@ -35,5 +35,3 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-app-example
