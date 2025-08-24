@@ -32,6 +32,7 @@
     "expo-web-browser": "~14.2.0",
     "nativewind": "^4.1.23",
     "prettier-plugin-tailwindcss": "^0.5.14",
+    "qrcode.react": "^4.2.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
