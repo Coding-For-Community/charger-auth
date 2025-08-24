@@ -1,20 +1,19 @@
-import { Text, View } from "react-native";
-import {QRCodeSVG} from 'qrcode.react';
+import { useAsyncEffect } from "@/lib/useAsyncEffect";
+import { useAsyncStorage } from "@react-native-async-storage/async-storage";
+import { Stack, useRouter } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 
 export default function Index() {
-  // mobile app - phones
-  // ipad app
-  // admin website - mrs merrims
+  const router = useRouter()
+  const storage = useAsyncStorage('studentId')
+  useAsyncEffect(async () => {
+    const studentId = await storage.getItem()
+    router.replace(studentId ? "/HomePage" : "/MainSigninPage")
+  }, [])
+
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <QRCodeSVG value="https://www.google.com" />
-      <Text>sakljfasdkl app/index.tsx to edit this screen.</Text>
+    <View style={{alignItems: 'center', justifyContent: 'center', flex: 1}}>
+      <ActivityIndicator size={50} />
     </View>
-  );
+  )
 }

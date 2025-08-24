@@ -9,8 +9,7 @@ from checkin.models import Student, CustomSchedule, CustomFreeBlock
 from checkin.schema import JustUserSchema, CustomScheduleSchema, JustBlockSchema
 from config import settings
 
-if not 'manage.py' in sys.argv:
-    # Adds students for day at every day, right before school starts
+if "manage.py" not in sys.argv:
     asyncio.create_task(daily_reset())
     schedule.every().day.at("08:50").do(daily_reset)
 

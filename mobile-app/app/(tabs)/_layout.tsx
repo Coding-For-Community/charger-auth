@@ -9,7 +9,7 @@ export default function TabLayout() {
         options={{
           title: "Order",
           headerShown: false,
-          tabBarIcon: (args: { color: string, size: string }) => (
+          tabBarIcon: args => (
             <Feather name="coffee" {...args} />
           ),
         }}
