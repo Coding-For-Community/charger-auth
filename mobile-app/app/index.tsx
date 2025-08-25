@@ -12,8 +12,10 @@ export default function Index() {
   }, [])
 
   return (
+    <>
     <View style={{alignItems: 'center', justifyContent: 'center', flex: 1}}>
       <ActivityIndicator size={50} />
     </View>
+    </>
   )
 }

@@ -16,15 +16,15 @@ export function SignInTextInput(args: TextInputProps) {
 const styles = StyleSheet.create({
   input: {
     width: '100%',
-    height: 50,
+    height: 45,
     backgroundColor: '#ffffff',
     borderColor: '#d1d5db', // Light border color
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    paddingHorizontal: 14,
+    fontSize: 14,
     color: '#111827',
-    marginBottom: 20,
+    marginBottom: 10,
   }
 })
 

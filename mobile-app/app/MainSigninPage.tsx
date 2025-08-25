@@ -27,9 +27,6 @@ export default function MainSigninPage() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      {/*Disables header */}
-      <Stack.Screen options={{ headerShown: false }} />
-
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -74,28 +71,16 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#111827', // Dark text for high contrast
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#4b5563', // A softer, medium gray
-    marginBottom: 32,
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    backgroundColor: '#ffffff',
-    borderColor: '#d1d5db', // Light border color
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#111827',
     marginBottom: 20,
+    textAlign: 'center',
   },
   footer: {
     width: '100%',
@@ -104,7 +89,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#3b82f6', // Use the same brand color for consistency
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
   },
 });

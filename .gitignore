@@ -4,6 +4,7 @@
 mobile-app/node_modules/
 .venv
 __pycache__
+staticfiles
 
 # Expo
 mobile-app/.expo/

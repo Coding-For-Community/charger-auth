@@ -19,7 +19,7 @@ export function SignInButton(args: {
 const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
-    height: 50,
+    height: 45,
     backgroundColor: LIGHT_BLUE, // A vibrant, accessible blue
     justifyContent: 'center',
     alignItems: 'center',
@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   }
 });

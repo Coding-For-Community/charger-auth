@@ -14,9 +14,6 @@ export default function SignInWithEmail() {
       alignItems: 'center',
       paddingHorizontal: 24,
     }}>
-      {/* Disables header */}
-      <Stack.Screen options={{ headerShown: false }} />
-
       <View style={{
         flex: 1,
         justifyContent: 'center',
