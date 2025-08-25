@@ -1,9 +1,26 @@
 # ChargerAuth
 
+### Setup
+```bash
+cd mobile-app
+npm install
+
+cd ../server
+py -m venv .venv 
+.venv/Scripts/Activate # enables venv
+pip install requirements.txt
+py manage.py collectstatic
+```
+
 ### How to run: backend
-On init: ```py manage.py collectstatic```
-To run server: ```py main.py``` (don't use runserver, since we are using ASGI)
+```bash
+cd ../server
+.venv/Scripts/Activate # enables venv
+py main.py
+```
 
 ### How to run: frontend apps
-On init: ```npm install```
-To run app(s): ```npx expo start```
+```bash
+cd ../{app_name}
+npx expo start
+```
