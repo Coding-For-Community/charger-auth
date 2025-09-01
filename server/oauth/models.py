@@ -2,7 +2,7 @@ from django.db import models
 
 class BlackbaudToken(models.Model):
     token_type = models.CharField(max_length=40)
-    access_token = models.CharField(max_length=1300, primary_key=True)
+    access_token = models.CharField(max_length=1300)
     refresh_token = models.CharField(max_length=100)
     expires_at = models.PositiveIntegerField()
 

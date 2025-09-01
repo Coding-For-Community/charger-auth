@@ -2,8 +2,11 @@ import os
 import ninja
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
+from authlib.integrations.requests_client import OAuth2Session
 from django.shortcuts import redirect
 from dotenv import load_dotenv
+
+from checkin.core.api_methods import daily_reset
 from config import settings
 from oauth.models import BlackbaudToken
 
@@ -25,6 +28,7 @@ oauth = AsyncOAuth2Client(
     client_id=os.environ["OAUTH_CLIENT_ID"],
     client_secret=os.environ["OAUTH_CLIENT_SECRET"],
     update_token=update_token,
+    token_endpoint="https://oauth2.sky.blackbaud.com/token",
 )
 
 def oauth_client():
@@ -34,13 +38,11 @@ def oauth_client():
     return oauth
 
 router = ninja.Router()
-auth_endpoint = "https://oauth2.sky.blackbaud.com/authorization"
-token_endpoint = "https://oauth2.sky.blackbaud.com/token"
 
 @router.get("/")
 def login(request):
     auth_url, _ = oauth.create_authorization_url(
-        auth_endpoint,
+        "https://oauth2.sky.blackbaud.com/authorization",
         redirect_uri=request.build_absolute_uri("/oauth/authorize/")
     )
     return redirect(auth_url)
@@ -48,7 +50,6 @@ def login(request):
 @router.get("/authorize/")
 async def authorize(request):
     token = await oauth.fetch_token(
-        token_endpoint,
         authorization_response=request.build_absolute_uri(),
         redirect_uri=request.build_absolute_uri("/oauth/authorize/")
     )
@@ -59,6 +60,7 @@ async def authorize(request):
         refresh_token=token["refresh_token"],
         expires_at=token["expires_at"]
     )
+    await daily_reset() # redo daily reset after the token is reinitialised
     return {
         "token": token
     }
@@ -66,17 +68,21 @@ async def authorize(request):
 if settings.DEBUG:
     @router.get("/test/{path:api_route}")
     async def test(request, api_route: str):
-        res = await oauth.get("https://api.sky.blackbaud.com/afe-rostr/ims/oneroster/v1p1/" + api_route)
+        res = await oauth.get(
+            "https://api.sky.blackbaud.com/school/v1/academics/" + api_route,
+            headers={
+                'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]
+            }
+        )
         if res.status_code != 200:
             return res.text
         else:
             return res.json()
 
-    @router.get("/refresh")
+    @router.get("/refresh/")
     async def manual_refresh_test(request):
         token = await BlackbaudToken.objects.afirst()
         await oauth.refresh_token(
-            token_endpoint,
             refresh_token=token.refresh_token
         )
         return "Yeah i hope this worked"
