@@ -1,16 +1,16 @@
-import AsyncStorage, { useAsyncStorage } from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Link, Stack, useRouter } from 'expo-router';
 import {
-  StyleSheet,
-  Text,
-  View,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { SignInButton } from "./components/SignInButton";
-import { SignInTextInput } from "./components/SignInTextInput";
+import { SignInButton } from "@/lib/components/SignInButton";
+import { SignInTextInput } from "@/lib/components/SignInTextInput";
 
 export default function MainSigninPage() {
   const [studentId, setStudentId] = useState('')

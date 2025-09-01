@@ -8,13 +8,10 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 """
 
 import os
-from typing import Callable, Awaitable
-
 import django
 
 from django.core.asgi import ASGIHandler
-from core.client_session import close_client_session, init_client_session
-from core.run_continuously import run_continuously
+from config.run_continuously import run_continuously
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
@@ -27,12 +24,10 @@ class CustomASGIHandler(ASGIHandler):
             while True:
                 message = await receive()
                 if message['type'] == 'lifespan.startup':
-                    init_client_session()
-                    # Sets up scheduler
+                    # # Sets up scheduler
                     self.stop_run_continuously = run_continuously()
                     await send({'type': 'lifespan.startup.complete'})
                 elif message['type'] == 'lifespan.shutdown':
-                    await close_client_session()
                     self.stop_run_continuously.set()
                     await send({'type': 'lifespan.shutdown.complete'})
                     return

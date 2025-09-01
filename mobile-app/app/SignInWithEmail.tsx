@@ -1,8 +1,7 @@
-import { SafeAreaView, Text, View } from "react-native";
-import { SignInButton } from "./components/SignInButton";
-import { SignInTextInput } from "./components/SignInTextInput";
 import { useState } from "react";
-import { Stack } from "expo-router";
+import { SafeAreaView, Text, View } from "react-native";
+import { SignInButton } from "@/lib/components/SignInButton";
+import { SignInTextInput } from "@/lib/components/SignInTextInput";
 
 export default function SignInWithEmail() {
   const [email, setEmail] = useState('');

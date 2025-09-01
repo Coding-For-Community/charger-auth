@@ -8,7 +8,7 @@ def _delta_time(now: datetime, target: time):
     return (datetime.combine(now.date(), target) - now).total_seconds()
 
 async def free_blocks_today_iter():
-    now = datetime.now()
+    now = __get_now()
     custom_schedule = await CustomSchedule.objects.filter(day=now.date()).afirst()
     if custom_schedule:
         free_blocks = CustomFreeBlock.objects.filter(schedule=custom_schedule)
@@ -36,11 +36,15 @@ async def get_student_ids_for(block: FreeBlock) -> list[int]:
     return [5840061, 123, 1234, 12345, 123456] # TODO - implement with blackbaud api
 
 async def get_curr_free_block() -> FreeBlock | None:
-    now = datetime.now()
+    now = __get_now()
     async for free_block, start_time in free_blocks_today_iter():
         if -TIME_RANGE_SECS <= _delta_time(now, start_time) <= TIME_RANGE_SECS:
             return free_block
     return None
+
+# used for shimming time
+def __get_now():
+    return datetime(2025,9, 1, 10, 30)
 
 
 

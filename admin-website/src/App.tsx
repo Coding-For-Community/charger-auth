@@ -1,35 +1,108 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useDisclosure, useLocalStorage } from '@mantine/hooks';
+import classes from './App.module.css'
+import { ActionIcon, AppShell, Burger, Button, Card, Checkbox, Group, Paper, rem, Select, Stack, Text, Title } from '@mantine/core'
+import { useState } from 'react';
+import { IconReload } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 
-function App() {
-  const [count, setCount] = useState(0)
+const BACKEND_URL = "http://127.0.0.1:8001"
+
+export function App() {
+  const [opened, { toggle }] = useDisclosure();
+  const [block, setBlock] = useState("A");
+  const absentStudentsQ = useQuery({
+    queryKey: ["absentStudents"],
+    queryFn: async () => {
+      const res = await fetch(BACKEND_URL + "/checkin/notCheckedInStudents/", {
+        method: "POST",
+        body: JSON.stringify({ block })
+      })
+      return (await res.json())["student_ids"] as number[]
+    }
+  })
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <AppShell
+      padding="md"
+      header={{ height: 60 }}
+      navbar={{width: 0, breakpoint: 'sm'}}
+    >
+      <AppShell.Header>
+        <Group mt={rem(15)} mx={rem(15)} gap={rem(10)}>
+          <Burger
+            opened={opened}
+            onClick={toggle}
+            hiddenFrom="sm"
+            size="sm"
+          />
+          <Title order={3}>CA Free Block Check-in Admin</Title>
+        </Group>
+      </AppShell.Header>
+    
+      <AppShell.Main maw={rem(600)}>
+        <Group gap={rem(10)} mb={rem(20)}>
+          <Title order={4}>Not checked in students for </Title>
+          <Select
+            data={["A", "B", "C", "D", "E", "F", "G"]} 
+            value={block}
+            onChange={block => {
+              if (block != null) setBlock(block)
+            }}
+            size="xs"
+            maw={rem(80)}
+          />
+          <ActionIcon variant="outline" ml="auto" color="rgb(0, 0, 0)" radius="lg">
+            <IconReload size="20" />
+          </ActionIcon>
+        </Group>
+        <Stack gap={rem(10)}>
+          <StudentListing name="Daniel Chen" />
+          <StudentListing name="ABC" />
+          <StudentListing name="DEF" />
+        </Stack>
+        
+        {/* <h1 className="list-title">Class Roster 🎓</h1>
+        <ul className="student-list">
+          {students.map((student, index) => (
+            <li key={index} className="student-list-item">
+              {student}
+            </li>
+          ))}
+        </ul> */}
+      </AppShell.Main>
+    </AppShell>
+  );
 }
 
-export default App
+function StudentListing({ name }: { name: string }) {
+  const [checkedItems, setCheckedItems] = useLocalStorage({
+    key: "checkedItems",
+    defaultValue: [] as string[]
+  })
+  const checked = checkedItems.includes(name)
+  const setChecked = (checked: boolean) => {
+    if (checked) {
+      setCheckedItems(i => i.concat(name))
+    } else {
+      setCheckedItems(i => i.filter(item => item !== name))
+    }
+  }
+  return (
+    <Paper 
+      shadow="xs" 
+      radius={rem(10)} 
+      p={rem(10)} 
+      bg="rgb(250, 251, 254)"
+      onClick={() => setChecked(!checked)}
+    >
+      <Group justify="space-between">
+        <Title order={5}>{name}</Title>
+        <Checkbox 
+          bg="#fafbfe" 
+          checked={checked}
+          onChange={e => setChecked(e.currentTarget.checked)}
+        />
+      </Group>
+    </Paper>
+  )
+}

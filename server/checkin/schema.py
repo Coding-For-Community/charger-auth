@@ -6,8 +6,9 @@ from checkin.core.types import FreeBlock
 # Unlike models (which are basically SQL/database representations)
 # Schemas are representations of the JSON that goes in and out of the server.
 
-class JustUserSchema(Schema):
-    id: int
+class CheckInSchema(Schema):
+    user_id: int
+    checkin_token: int
 
 class JustBlockSchema(Schema):
     block: FreeBlock

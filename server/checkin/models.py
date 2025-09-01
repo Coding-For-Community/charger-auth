@@ -6,9 +6,6 @@ free_block_validator = RegexValidator(r"[A-G]*")
 
 class Student(models.Model):
     # SKY API/OneRoster server code 70% done
-
-
-
     # A list of chars that represents all the blocks a student hasn't checked in yet
     absent_free_blocks: str = models.CharField(
         max_length=8,
