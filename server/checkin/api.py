@@ -7,7 +7,7 @@ import schedule
 from dataclasses import dataclass
 from datetime import time, datetime
 from ninja.errors import HttpError
-from checkin.core.api_methods import get_curr_free_block, daily_reset, free_blocks_today_iter, get_student_ids_for
+from checkin.core.api_methods import get_curr_free_block, daily_reset, free_blocks_today_iter, get_student_data_for
 from checkin.core.types import ALL_FREE_BLOCKS
 from checkin.models import Student, CustomSchedule, CustomFreeBlock
 from checkin.schema import CheckInSchema, CustomScheduleSchema, JustBlockSchema
@@ -113,7 +113,7 @@ if settings.DEBUG:
     async def free_block_students(request, block: str):
         if block not in ALL_FREE_BLOCKS:
             raise HttpError(400, "Invalid free block")
-        return get_student_ids_for(block)
+        return [data[0] for data in get_student_data_for(block)]
 
 
 

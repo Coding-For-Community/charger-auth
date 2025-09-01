@@ -46,7 +46,7 @@ async def daily_reset():
     await _init_students_data()
     print("Daily reset complete")
 
-def get_student_ids_for(block: FreeBlock) -> list[int]:
+def get_student_data_for(block: FreeBlock) -> list[tuple[int, str]]:
     """
     Gets all student IDs for a given free block.
     """
@@ -58,9 +58,14 @@ def get_student_ids_for(block: FreeBlock) -> list[int]:
         is_correct_sem = (now.month <= 5 and "S2" in name) or (now.month >= 7 and "S1" in name)
         if not is_correct_block or not is_correct_sem:
             continue
-        return [int(user["user"]["id"]) for user in course["roster"]]
+        return [_get_data(user["user"]) for user in course["roster"]]
     print("No free periods available for block " + block)
     return []
+
+def _get_data(user: dict) -> tuple[int, str]:
+    student_id = int(user["id"])
+    student_name = f"{user['first_name']} {user['middle_name']} {user['last_name']}"
+    return student_id, student_name
 
 def _delta_time(now: datetime, target: time):
     return (datetime.combine(now.date(), target) - now).total_seconds()
@@ -71,10 +76,11 @@ def _get_now():
 
 async def _init_students_data():
     async for free_block, start_time in free_blocks_today_iter():
-        student_ids = get_student_ids_for(free_block)
-        for student_id in student_ids:
+        student_data = get_student_data_for(free_block)
+        for (student_id, student_name) in student_data:
             student, _ = await Student.objects.aget_or_create(
                 id=student_id,
+                name=student_name,
                 defaults={"absent_free_blocks": ""}
             )
             student.absent_free_blocks += free_block

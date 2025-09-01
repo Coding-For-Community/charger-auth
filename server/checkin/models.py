@@ -13,6 +13,7 @@ class Student(models.Model):
         validators=[free_block_validator]
     )
     id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100, default="[Unknown]")
 
 
 class CustomSchedule(models.Model):
