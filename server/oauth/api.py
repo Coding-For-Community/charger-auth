@@ -52,14 +52,13 @@ async def authorize(request):
         authorization_response=request.build_absolute_uri(),
         redirect_uri=request.build_absolute_uri("/oauth/authorize/")
     )
-    token_model = await BlackbaudToken.objects.afirst()
-    if not token_model:
-        token_model = BlackbaudToken()
-    token_model.token_type = token["token_type"]
-    token_model.access_token = token["access_token"]
-    token_model.refresh_token = token["refresh_token"]
-    token_model.expires_at = token["expires_at"]
-    await token_model.asave()
+    await BlackbaudToken.objects.all().adelete()
+    await BlackbaudToken.objects.acreate(
+        token_type=token["token_type"],
+        access_token=token["access_token"],
+        refresh_token=token["refresh_token"],
+        expires_at=token["expires_at"]
+    )
     return {
         "token": token
     }
