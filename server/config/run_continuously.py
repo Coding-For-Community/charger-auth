@@ -1,21 +1,11 @@
 import threading
 import time
-
 import schedule
 
-# Note: this function shouldn't be called by itself.
-# It is merely a plugin of the schedule library that supports threading.
-# Use the native schedule api to schedule tasks(in the asgi handler).
 def run_continuously(interval=1):
-    """Continuously run, while executing pending jobs at each
-    elapsed time interval.
-    @return cease_continuous_run: threading. Event which can
-    be set to cease continuous run. Please note that it is
-    *intended behavior that run_continuously() does not run
-    missed jobs*. For example, if you've registered a job that
-    should run every minute and you set a continuous run
-    interval of one hour then your job won't be run 60 times
-    at each interval but only once.
+    """
+    A plugin of the schedule library that allows tasks to be scheduled in a threaded manner,
+    preventing the process from blocking django's background server tasks.
     """
     cease_continuous_run = threading.Event()
 

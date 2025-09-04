@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 from datetime import datetime, time
@@ -8,7 +9,11 @@ from checkin.models import CustomSchedule, CustomFreeBlock, Student
 from dotenv import load_dotenv
 
 load_dotenv()
-rosters_data: list[dict] = []
+_rosters_data: list[dict] = []
+_is_resetting = False
+
+def is_resetting():
+    return _is_resetting
 
 async def get_curr_free_block() -> FreeBlock | None:
     """
@@ -41,31 +46,57 @@ async def daily_reset():
     """
     Common initialization that should be scheduled to run every day.
     """
-    await Student.objects.all().adelete()
-    await _init_roster_data()
-    await _init_students_data()
-    print("Daily reset complete")
+    global _is_resetting
+    _is_resetting = True
+    from oauth.api import oauth_client
+    res, _ = await asyncio.gather(
+        oauth_client().get(
+            "https://api.sky.blackbaud.com/school/v1/academics/rosters",
+            headers={
+                'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]
+            }
+        ),
+        Student.objects.all().aupdate(free_blocks=""),
+    )
+    if res.status_code != 200:
+        raise Exception("Roster data did not initialize. Err: \n" + res.text)
+    courses = res.json()
+    num_free_block_courses = 0
+    tasks = []
+    for course in courses:
+        maybe_free_block = await _free_block_of(course)
+        if maybe_free_block:
+            num_free_block_courses += 1
+        tasks.extend(_save_student(user, maybe_free_block) for user in course["roster"])
+    await asyncio.gather(*tasks)
+    _is_resetting = False
+    print(f"Num free block courses: {num_free_block_courses}")
 
-def get_student_data_for(block: FreeBlock) -> list[tuple[int, str]]:
-    """
-    Gets all student IDs for a given free block.
-    """
+async def _save_student(user: dict, maybe_free_block: str | None = None):
+    if user["leader"].get("type") == "Teacher":
+        return
+    data = user["user"]
+    student, _ = await Student.objects.aget_or_create(id=data["id"])
+    student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
+    student.email = data["email"]
+    if maybe_free_block:
+        student.free_blocks += maybe_free_block
+    await student.asave()
+
+async def _free_block_of(course: dict) -> FreeBlock | None:
     now = _get_now()
-    for course in rosters_data:
-        name = course["section"]["name"]
-        results = re.findall(r"\(.\)", name)
-        is_correct_block = len(results) == 1 and block in results[0]
-        is_correct_sem = (now.month <= 5 and "S2" in name) or (now.month >= 7 and "S1" in name)
-        if not is_correct_block or not is_correct_sem:
-            continue
-        return [_get_data(user["user"]) for user in course["roster"]]
-    print("No free periods available for block " + block)
-    return []
-
-def _get_data(user: dict) -> tuple[int, str]:
-    student_id = int(user["id"])
-    student_name = f"{user['first_name']} {user['middle_name']} {user['last_name']}"
-    return student_id, student_name
+    name = course["section"]["name"]
+    is_correct_sem = (now.month <= 5 and "S2" in name) or (now.month >= 7 and "S1" in name)
+    if not is_correct_sem:
+        return None
+    search_patterns = re.findall(r"\(.\)", name)
+    if len(search_patterns) != 1:
+        return None
+    free_block = search_patterns[0][1] # get the middle char of the first(and only) pattern
+    async for block, _ in free_blocks_today_iter():
+        if block == free_block:
+            return block
+    return None
 
 def _delta_time(now: datetime, target: time):
     return (datetime.combine(now.date(), target) - now).total_seconds()
@@ -73,33 +104,3 @@ def _delta_time(now: datetime, target: time):
 # used for shimming time
 def _get_now():
     return datetime.now()
-
-async def _init_students_data():
-    async for free_block, start_time in free_blocks_today_iter():
-        student_data = get_student_data_for(free_block)
-        for (student_id, student_name) in student_data:
-            student, _ = await Student.objects.aget_or_create(
-                id=student_id,
-                name=student_name,
-                defaults={"absent_free_blocks": ""}
-            )
-            student.absent_free_blocks += free_block
-            await student.asave()
-
-async def _init_roster_data():
-    global rosters_data
-    from oauth.api import oauth_client
-    res = await oauth_client().get(
-        "https://api.sky.blackbaud.com/school/v1/academics/rosters",
-        headers={
-            'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]
-        }
-    )
-    print("free period" in res.text.lower())
-    if res.status_code == 200:
-        rosters_data = res.json()
-        print(f"Len initial: {len(rosters_data)}")
-        rosters_data = [course for course in rosters_data if "Free Period" in course["section"]["name"]]
-        print(f"Len final: {len(rosters_data)}")
-    else:
-        raise Exception("Roster data did not initialize. Err: \n" + res.text)

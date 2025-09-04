@@ -2,7 +2,6 @@ import os
 import ninja
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from authlib.integrations.requests_client import OAuth2Session
 from django.shortcuts import redirect
 from dotenv import load_dotenv
 
@@ -11,6 +10,7 @@ from config import settings
 from oauth.models import BlackbaudToken
 
 load_dotenv()
+os.environ['AUTHLIB_INSECURE_TRANSPORT'] = "1" if settings.DEBUG else "0"
 
 # noinspection PyUnusedLocal
 async def update_token(token, refresh_token=None, access_token=None):
