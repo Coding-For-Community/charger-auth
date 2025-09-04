@@ -10,9 +10,6 @@ class CheckInSchema(Schema):
     user_id: int
     checkin_token: int
 
-class JustBlockSchema(Schema):
-    block: FreeBlock
-
 class CustomFreeBlockSchema(Schema):
     label: FreeBlock
     hour: int

@@ -8,8 +8,9 @@ from checkin.core.api_methods import (
     free_blocks_today_iter, is_resetting, daily_reset
 )
 from checkin.core.checkin_token import prev_token, curr_token
+from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import Student, CustomSchedule, CustomFreeBlock
-from checkin.schema import CheckInSchema, CustomScheduleSchema, JustBlockSchema
+from checkin.schema import CheckInSchema, CustomScheduleSchema
 from config import settings
 
 router = ninja.Router()
@@ -21,10 +22,23 @@ async def checkin_token(request):
         "time_until_refresh": 5.1 - (datetime.now() - curr_token().timestamp).total_seconds(),
     }
 
+@router.get("/notCheckedInStudents/{free_block}/")
+async def get_not_checked_in_students(request, free_block: FreeBlock):
+    if free_block not in ALL_FREE_BLOCKS:
+        raise HttpError(400, "Invalid free block: " + free_block)
+    students = Student.objects.all()
+    student_ids = []
+    async for student in students:
+        if free_block in student.free_blocks and free_block not in student.checked_in_blocks:
+            student_ids.append(student.id)
+    return {
+        "student_ids": student_ids
+    }
+
 # noinspection PyTypeChecker
-@router.post("/hasFreeBlockNow/")
-async def user_has_free_block(request, data: CheckInSchema):
-    student = await Student.objects.filter(user_id=data.user_id).afirst()
+@router.get("/hasFreeBlockNow/{user_id}/")
+async def user_has_free_block(request, user_id: int):
+    student = await Student.objects.filter(id=user_id).afirst()
     curr_free_block = await get_curr_free_block()
     if not student or not curr_free_block:
         return { "has_free_block": False }
@@ -32,9 +46,9 @@ async def user_has_free_block(request, data: CheckInSchema):
         "has_free_block": curr_free_block in student.free_blocks
     }
 
-@router.post("/userFreeBlocks/")
-async def all_user_free_blocks(request, data: CheckInSchema):
-    student = await Student.objects.filter(user_id=data.user_id).afirst()
+@router.get("/userFreeBlocks/{user_id}/")
+async def all_user_free_blocks(request, user_id: int):
+    student = await Student.objects.filter(id=user_id).afirst()
     if not student:
         return { "free_blocks": [] }
     result = []
@@ -44,20 +58,7 @@ async def all_user_free_blocks(request, data: CheckInSchema):
                 "name": free_block,
                 "seconds_from_12_AM": (start_time - time(0, 0)).total_seconds()
             })
-    return {
-        "free_blocks": result
-    }
-
-@router.post("/notCheckedInStudents/")
-async def get_not_checked_in_students(request, data: JustBlockSchema):
-    students = Student.objects.all()
-    student_ids = []
-    async for student in students:
-        if data.block in student.free_blocks and data.block not in student.checked_in_blocks:
-            student_ids.append(student.id)
-    return {
-        "student_ids": student_ids
-    }
+    return { "free_blocks": result }
 
 @router.post("/addCustomSchedule/")
 async def add_custom_schedule(request, data: CustomScheduleSchema):
