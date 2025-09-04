@@ -1,6 +1,5 @@
 import asyncio
 import os
-import re
 from datetime import datetime, time
 
 from checkin.core.constants import TIME_RANGE_SECS, get_today_schedule
@@ -87,14 +86,11 @@ async def _free_block_of(course: dict) -> FreeBlock | None:
     now = _get_now()
     name = course["section"]["name"]
     is_correct_sem = (now.month <= 5 and "S2" in name) or (now.month >= 7 and "S1" in name)
-    if not is_correct_sem:
+    free_block = course["section"].get("block")
+    if not is_correct_sem or not free_block:
         return None
-    search_patterns = re.findall(r"\(.\)", name)
-    if len(search_patterns) != 1:
-        return None
-    free_block = search_patterns[0][1] # get the middle char of the first(and only) pattern
     async for block, _ in free_blocks_today_iter():
-        if block == free_block:
+        if block == free_block["name"]:
             return block
     return None
 

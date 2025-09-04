@@ -23,7 +23,7 @@ async def checkin_token(request):
     }
 
 @router.get("/notCheckedInStudents/{free_block}/")
-async def get_not_checked_in_students(request, free_block: FreeBlock):
+async def not_checked_in_students(request, free_block: FreeBlock):
     if free_block not in ALL_FREE_BLOCKS:
         raise HttpError(400, "Invalid free block: " + free_block)
     students = Student.objects.all()
@@ -36,21 +36,27 @@ async def get_not_checked_in_students(request, free_block: FreeBlock):
     }
 
 # noinspection PyTypeChecker
-@router.get("/hasFreeBlockNow/{user_id}/")
-async def user_has_free_block(request, user_id: int):
+@router.get("/freeBlockNow/{user_id}/")
+async def free_block_now(request, user_id: int):
     student = await Student.objects.filter(id=user_id).afirst()
     curr_free_block = await get_curr_free_block()
     if not student or not curr_free_block:
         return { "has_free_block": False }
     return {
+        "curr_free_block": curr_free_block,
         "has_free_block": curr_free_block in student.free_blocks
     }
+
+@router.get("/studentExists/{user_id}")
+async def student_exists(request, user_id: int):
+    student = await Student.objects.filter(id=user_id).afirst()
+    return { "exists": student is not None }
 
 @router.get("/userFreeBlocks/{user_id}/")
 async def all_user_free_blocks(request, user_id: int):
     student = await Student.objects.filter(id=user_id).afirst()
     if not student:
-        return { "free_blocks": [] }
+        raise HttpError(400, "No student exists with id " + str(user_id))
     result = []
     async for free_block, start_time in free_blocks_today_iter():
         if free_block in student.free_blocks:
@@ -60,15 +66,22 @@ async def all_user_free_blocks(request, user_id: int):
             })
     return { "free_blocks": result }
 
+@router.get("/userIdOf/{email}/")
+async def get_user_id(request, email: str):
+    student = await Student.objects.filter(email=email).afirst()
+    if not student:
+        raise HttpError(400, "No student exists with email " + email)
+    return { "user_id": student.id }
+
 @router.post("/addCustomSchedule/")
 async def add_custom_schedule(request, data: CustomScheduleSchema):
     custom_schedule, _ = await CustomSchedule.objects.aget_or_create(day=data.day)
     for free_block in data.free_blocks:
-        await CustomFreeBlock.objects.aget_or_create(
+        await CustomFreeBlock(
             label=free_block.label,
             start_time=free_block.start_time,
             schedule=custom_schedule,
-        )
+        ).asave()
     await daily_reset()
     return { "success": True }
 

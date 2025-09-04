@@ -1,4 +1,8 @@
 # ChargerAuth
+### TODO!!!!!!
+- Just use blackbaud for schedule
+- All students that checked in - add this too!!!!!
+- All student that haven't checked in
 
 ### Setup
 ```bash

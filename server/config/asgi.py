@@ -8,6 +8,7 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 """
 
 import os
+import sys
 import traceback
 
 import django
@@ -39,7 +40,8 @@ class CustomASGIHandler(ASGIHandler):
                         # Sets up daily reset scheduling
                         from checkin.core.api_methods import daily_reset
                         from checkin.core.checkin_token import update_checkin_token
-                        await daily_reset()
+                        if not "-noReset" in sys.argv:
+                            await daily_reset()
                         schedule.every().day.at("07:00").do(lambda: asyncio.create_task(daily_reset()))
                         schedule.every(5).seconds.do(update_checkin_token)
                     except:

@@ -45,6 +45,7 @@ def login(request):
         "https://oauth2.sky.blackbaud.com/authorization",
         redirect_uri=request.build_absolute_uri("/oauth/authorize/")
     )
+    # http://127.0.0.1:8000/oauth/
     return redirect(auth_url)
 
 @router.get("/authorize/")

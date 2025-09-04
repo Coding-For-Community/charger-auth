@@ -24,11 +24,7 @@ class CustomSchedule(models.Model):
 
 class CustomFreeBlock(models.Model):
     schedule = models.ForeignKey(CustomSchedule, on_delete=models.CASCADE)
-    label: FreeBlock = models.CharField(
-        max_length=1,
-        validators=[free_block_validator],
-        primary_key=True
-    )
+    label: FreeBlock = models.CharField(max_length=1, validators=[free_block_validator])
     start_time = models.TimeField()
 
 
