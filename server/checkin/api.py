@@ -3,7 +3,7 @@ import ninja
 
 from datetime import time, datetime
 from ninja.errors import HttpError
-from ninja.throttling import UserRateThrottle, AnonRateThrottle
+from ninja.throttling import AnonRateThrottle
 
 from checkin.core.api_methods import get_curr_free_block, is_resetting, free_blocks_today, daily_reset
 from checkin.core.checkin_token import prev_token, curr_token
@@ -26,14 +26,14 @@ async def not_checked_in_students(request, free_block: FreeBlock):
     if free_block not in ALL_FREE_BLOCKS:
         raise HttpError(400, "Invalid free block: " + free_block)
     students = Student.objects.all()
-    student_ids = []
+    output = []
     async for student in students:
-        print(student)
         if free_block in student.free_blocks and free_block not in student.checked_in_blocks:
-            student_ids.append(student.id)
-    return {
-        "student_ids": student_ids
-    }
+            output.append({
+                "id": student.id,
+                "name": student.name,
+            })
+    return { "students": output }
 
 # noinspection PyTypeChecker
 @router.get("/freeBlockNow/{user_id}/")

@@ -1,7 +1,7 @@
 import { useDisclosure, useLocalStorage } from '@mantine/hooks';
 import classes from './App.module.css'
 import { ActionIcon, AppShell, Burger, Button, Card, Checkbox, Group, Loader, Paper, rem, Select, Stack, Text, Title } from '@mantine/core'
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconReload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -14,9 +14,12 @@ export function App() {
     queryKey: ["absentStudents"],
     queryFn: async () => {
       const res = await fetch(BACKEND_URL + "/checkin/notCheckedInStudents/" + block)
-      return (await res.json())["student_ids"] as number[]
+      return (await res.json())["students"] as { id: number, name: string }[]
     }
   })
+  useEffect(() => {
+    absentStudentsQ.refetch()
+  }, [block])
   const absentStudents = absentStudentsQ.data ?? []
 
   return (
@@ -44,16 +47,13 @@ export function App() {
             data={["A", "B", "C", "D", "E", "F", "G"]} 
             value={block}
             onChange={block => {
-              if (block != null) {
-                setBlock(block)
-                absentStudentsQ.refetch()
-              }
+              if (block != null) setBlock(block)
             }}
             size="xs"
             maw={rem(80)}
           />
           {
-            absentStudentsQ.isFetching 
+            absentStudentsQ.isFetching
               ? <Loader size={20} ml="auto" />
               : <ActionIcon 
                   variant="outline" 
@@ -70,7 +70,7 @@ export function App() {
         </Group>
         <Stack gap={rem(10)}>
           {
-            absentStudents.map(id => <StudentListing name={`${id}`} />)
+            absentStudents.map(student => <StudentListing name={student.name} />)
           }
         </Stack>
         

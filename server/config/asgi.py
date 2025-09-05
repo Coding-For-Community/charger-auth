@@ -55,8 +55,6 @@ class CustomASGIHandler(ASGIHandler):
                     return
         await super().__call__(scope, receive, send)
 
-
-
 def get_asgi_application():
     django.setup(set_prefix=False)
     app = CustomASGIHandler()
