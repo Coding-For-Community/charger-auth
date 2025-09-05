@@ -1,6 +1,6 @@
 import { useDisclosure, useLocalStorage } from '@mantine/hooks';
 import classes from './App.module.css'
-import { ActionIcon, AppShell, Burger, Button, Card, Checkbox, Group, Paper, rem, Select, Stack, Text, Title } from '@mantine/core'
+import { ActionIcon, AppShell, Burger, Button, Card, Checkbox, Group, Loader, Paper, rem, Select, Stack, Text, Title } from '@mantine/core'
 import { useState } from 'react';
 import { IconReload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -13,13 +13,11 @@ export function App() {
   const absentStudentsQ = useQuery({
     queryKey: ["absentStudents"],
     queryFn: async () => {
-      const res = await fetch(BACKEND_URL + "/checkin/notCheckedInStudents/", {
-        method: "POST",
-        body: JSON.stringify({ block })
-      })
+      const res = await fetch(BACKEND_URL + "/checkin/notCheckedInStudents/" + block)
       return (await res.json())["student_ids"] as number[]
     }
   })
+  const absentStudents = absentStudentsQ.data ?? []
 
   return (
     <AppShell
@@ -46,19 +44,34 @@ export function App() {
             data={["A", "B", "C", "D", "E", "F", "G"]} 
             value={block}
             onChange={block => {
-              if (block != null) setBlock(block)
+              if (block != null) {
+                setBlock(block)
+                absentStudentsQ.refetch()
+              }
             }}
             size="xs"
             maw={rem(80)}
           />
-          <ActionIcon variant="outline" ml="auto" color="rgb(0, 0, 0)" radius="lg">
-            <IconReload size="20" />
-          </ActionIcon>
+          {
+            absentStudentsQ.isFetching 
+              ? <Loader size={20} ml="auto" />
+              : <ActionIcon 
+                  variant="outline" 
+                  ml="auto" 
+                  color="rgb(0, 0, 0)" 
+                  radius="lg"
+                  onClick={() => {
+                    absentStudentsQ.refetch()
+                  }}
+                >
+                  <IconReload size="20" />
+                </ActionIcon>
+          }
         </Group>
         <Stack gap={rem(10)}>
-          <StudentListing name="Daniel Chen" />
-          <StudentListing name="ABC" />
-          <StudentListing name="DEF" />
+          {
+            absentStudents.map(id => <StudentListing name={`${id}`} />)
+          }
         </Stack>
         
         {/* <h1 className="list-title">Class Roster 🎓</h1>
@@ -90,6 +103,7 @@ function StudentListing({ name }: { name: string }) {
   return (
     <Paper 
       shadow="xs" 
+      key={name}
       radius={rem(10)} 
       p={rem(10)} 
       bg="rgb(250, 251, 254)"

@@ -69,8 +69,10 @@ async def authorize(request):
 if settings.DEBUG:
     @router.get("/test/{path:api_route}")
     async def test(request, api_route: str):
+        args_str = request.build_absolute_uri()
+        args_str = args_str[args_str.index("?"):] if "?" in args_str else ""
         res = await oauth.get(
-            "https://api.sky.blackbaud.com/school/v1/academics/" + api_route,
+            "https://api.sky.blackbaud.com/school/v1/" + api_route + args_str,
             headers={
                 'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]
             }

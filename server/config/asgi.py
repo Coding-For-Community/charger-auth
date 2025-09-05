@@ -33,6 +33,7 @@ class CustomASGIHandler(ASGIHandler):
                         # Sets up scheduler
                         self.stop_run_continuously = run_continuously()
 
+                        print("got here")
                         # Registers cached blackbaud token
                         from oauth.api import init_token
                         await init_token()
@@ -44,6 +45,7 @@ class CustomASGIHandler(ASGIHandler):
                             await daily_reset()
                         schedule.every().day.at("07:00").do(lambda: asyncio.create_task(daily_reset()))
                         schedule.every(5).seconds.do(update_checkin_token)
+                        print("got here 2")
                     except:
                         print(traceback.format_exc()) # We have to use a broad exception clause since ASGI silently fails if an error occurs
                     await send({'type': 'lifespan.startup.complete'})

@@ -1,5 +1,3 @@
-from datetime import date
-
 from ninja import Schema
 from checkin.core.types import FreeBlock
 
@@ -14,11 +12,6 @@ class CustomFreeBlockSchema(Schema):
     label: FreeBlock
     hour: int
     minute: int
-
-class CustomScheduleSchema(Schema):
-    day: date
-    free_blocks: list[CustomFreeBlockSchema]
-
 
 
 

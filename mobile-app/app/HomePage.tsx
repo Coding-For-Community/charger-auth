@@ -28,7 +28,6 @@ export default function HomePage() {
     return (
       <View style={styles.mainContent}>
         <QRCodeSVG value={userId.data + ";" + tokenQuery.data["id"]} />
-        
         <TouchableOpacity onPress={() => AsyncStorage.clear()}>
           <Text>Clear Student ID(testing only)</Text>
         </TouchableOpacity>

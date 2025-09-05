@@ -2,6 +2,7 @@
 ### TODO!!!!!!
 - Just use blackbaud for schedule
 - All students that checked in - add this too!!!!!
+- Only use "US Academic Schedule" for shenanigans
 - All student that haven't checked in
 
 ### Setup
