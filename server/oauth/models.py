@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib import admin
+from config import settings
 
 class BlackbaudToken(models.Model):
     token_type = models.CharField(max_length=40)
@@ -13,3 +15,6 @@ class BlackbaudToken(models.Model):
             refresh_token=self.refresh_token,
             expires_at=self.expires_at,
         )
+
+if settings.DEBUG:
+    admin.site.register(BlackbaudToken)

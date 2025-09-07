@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'checkin',
     'oauth',
     'corsheaders',
+    'notifs'
 ]
 
 MIDDLEWARE = [

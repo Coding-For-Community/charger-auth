@@ -4,8 +4,9 @@ import { ActionIcon, AppShell, Burger, Button, Card, Checkbox, Group, Loader, Pa
 import { useEffect, useState } from 'react';
 import { IconReload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { BACKEND_URL } from './utils/constants';
+import PushNotificationButton from './components/PushNotifButton';
 
-const BACKEND_URL = "http://127.0.0.1:8001"
 
 export function App() {
   const [opened, { toggle }] = useDisclosure();
@@ -37,6 +38,7 @@ export function App() {
             size="sm"
           />
           <Title order={3}>CA Free Block Check-in Admin</Title>
+          <PushNotificationButton />
         </Group>
       </AppShell.Header>
     

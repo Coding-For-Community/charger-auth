@@ -1,28 +1,31 @@
 import asyncio
 import os
-from datetime import datetime, time
+import schedule
 
+from datetime import datetime, time
+from pywebpush import webpush, WebPushException
 from checkin.core.types import FreeBlock, ALL_FREE_BLOCKS
 from checkin.models import Student
 from dotenv import load_dotenv
+from notifs.models import SubscriptionData
 
 load_dotenv()
 time_range_secs = 600
-_free_blocks_today: list[tuple[FreeBlock, time]] = []
+_free_blocks_today: dict[FreeBlock, time] = {}
 _is_resetting = False
 
 def is_resetting():
     return _is_resetting
 
 def free_blocks_today():
-    return _free_blocks_today
+    return _free_blocks_today.items()
 
 def get_curr_free_block() -> FreeBlock | None:
     """
     Fetches the current free block.
     """
     now = _get_now()
-    for free_block, start_time in _free_blocks_today:
+    for free_block, start_time in free_blocks_today():
         if -time_range_secs <= _delta_time(now, start_time) <= time_range_secs:
             return free_block
     return None
@@ -57,14 +60,13 @@ async def daily_reset():
     # Resets the cached schedule for today
     calendar_data = calendar_res.json()
     _free_blocks_today.clear()
-    for schedule in calendar_data["value"][0]["schedule_sets"]:
-        if schedule["schedule_set_id"] != 3051:
+    for schedule_set in calendar_data["value"][0]["schedule_sets"]:
+        if schedule_set["schedule_set_id"] != 3051:
             continue
-        _free_blocks_today.extend(
-            (block["block"], datetime.fromisoformat(block["start_time"]).time())
-            for block in schedule["blocks"]
-            if block["block"] in ALL_FREE_BLOCKS
-        )
+        for block in schedule_set["blocks"]:
+            if block["block"] not in ALL_FREE_BLOCKS:
+                return
+            _free_blocks_today[block["block"]] = datetime.fromisoformat(block["start_time"]).time()
         break
     print(_free_blocks_today)
 
@@ -83,7 +85,7 @@ async def daily_reset():
     # Finally, declare resetting as done
     _is_resetting = False
 
-async def _save_student(user: dict, maybe_free_block: str | None = None):
+async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
     if user["leader"].get("type") == "Teacher":
         return
     data = user["user"]
@@ -91,7 +93,12 @@ async def _save_student(user: dict, maybe_free_block: str | None = None):
     student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
     student.email = data["email"]
     if maybe_free_block:
+        if maybe_free_block not in _free_blocks_today:
+            raise Exception(f"Free block {maybe_free_block} not found in today's calendar")
         student.free_blocks += maybe_free_block
+        block_time = _free_blocks_today[maybe_free_block]
+        run_time = time(block_time.hour, block_time.minute + 5)
+        schedule.every().day.at(run_time).do(lambda: asyncio.create_task(__remind_student(student)))
     await student.asave()
 
 def _free_block_of(course: dict) -> FreeBlock | None:
@@ -101,7 +108,7 @@ def _free_block_of(course: dict) -> FreeBlock | None:
     free_block = course["section"].get("block")
     if not is_correct_sem or not free_block:
         return None
-    for block, _ in _free_blocks_today:
+    for block, _ in free_blocks_today():
         if block == free_block["name"]:
             return block
     return None
@@ -112,3 +119,28 @@ def _delta_time(now: datetime, target: time):
 # used for shimming time
 def _get_now():
     return datetime.now()
+
+async def __remind_student(student: Student):
+    data = await SubscriptionData.objects.filter(student=student).afirst()
+    if data:
+        try:
+            webpush(
+                subscription_info=data.subscription,
+                data="Looks like you haven't signed in for your free block - make sure to do that!",
+                vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
+                vapid_claims={
+                    "sub": "mailto:" + data.student.email,
+                }
+            )
+        except WebPushException as ex:
+            print("I'm sorry, Dave, but I can't do that: {}", repr(ex))
+            # Mozilla returns additional information in the body of the response.
+            if ex.response is not None and ex.response.json():
+                extra = ex.response.json()
+                print(
+                    "Remote service replied with a {}:{}, {}",
+                    extra.code,
+                    extra.errno,
+                    extra.message
+                )
+    return schedule.CancelJob()
