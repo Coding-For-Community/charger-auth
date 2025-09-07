@@ -3,7 +3,6 @@ import { useDisclosure, useLocalStorage } from '@mantine/hooks';
 import { IconReload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import PushNotificationButton from '../components/PushNotifButton';
 import { BACKEND_URL } from '../utils/constants';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -41,7 +40,6 @@ function Admin() {
             size="sm"
           />
           <Title order={3}>CA Free Block Check-in Admin</Title>
-          <PushNotificationButton />
         </Group>
       </AppShell.Header>
     

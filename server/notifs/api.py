@@ -15,9 +15,11 @@ load_dotenv()
 
 router = ninja.Router()
 
-class WebpushIn(ninja.Schema):
-    subscription: dict
+class NeedsUserId(ninja.Schema):
     user_id: int
+
+class NeedsUserIdAndSubscription(NeedsUserId):
+    subscription: dict
 
 @router.get("/publicKey/")
 def vapid_public_key(request):
@@ -25,11 +27,15 @@ def vapid_public_key(request):
         "publicKey": os.environ["VAPID_PUBLIC_KEY"]
     }
 
+@router.get("/enabled/{int:user_id}/")
+async def is_registered(request, user_id: int):
+    student = await get_student(user_id)
+    data = await SubscriptionData.objects.filter(student=student).afirst()
+    return { "registered": bool(data) }
+
 @router.post("/register/")
-async def register_webpush(request, data: WebpushIn):
-    student = await Student.objects.filter(id=data.user_id).afirst()
-    if not student:
-        raise HttpError(400, "Student does not exist")
+async def register_webpush(request, data: NeedsUserIdAndSubscription):
+    student = await get_student(data.user_id)
     await SubscriptionData.objects.acreate(
         student=student,
         subscription=data.subscription
@@ -37,12 +43,16 @@ async def register_webpush(request, data: WebpushIn):
     return { "success": True }
 
 @router.post("/unregister/")
-async def unregister_webpush(request, data: WebpushIn):
-    student = await Student.objects.filter(id=data.user_id).afirst()
-    if not student:
-        raise HttpError(400, "Student does not exist")
+async def unregister_webpush(request, data: NeedsUserId):
+    student = await get_student(data.user_id)
     await SubscriptionData.objects.filter(student=student).adelete()
     return { "success": True }
+
+async def get_student(id: int):
+    student = await Student.objects.filter(id=id).afirst()
+    if not student:
+        raise HttpError(400, "Student does not exist")
+    return student
 
 if settings.DEBUG:
     @router.get("/test/{int:userid}")
@@ -75,5 +85,3 @@ def run_webpush(data: SubscriptionData):
                   extra.errno,
                   extra.message
                   )
-
-

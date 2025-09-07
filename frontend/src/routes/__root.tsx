@@ -4,12 +4,6 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 function Index() {
   return (
     <>
-      <div className="p-2 flex gap-2">
-        <Link to="/Admin" className="[&.active]:font-bold">
-          Home
-        </Link>{' '}
-      </div>
-      <hr />
       <Outlet />
       <TanStackRouterDevtools />
     </>

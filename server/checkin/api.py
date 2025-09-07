@@ -47,7 +47,7 @@ async def free_block_now(request, user_id: int):
         "has_free_block": curr_free_block in student.free_blocks
     }
 
-@router.get("/studentExists/{user_id}", throttle=AnonRateThrottle('1/s'))
+@router.get("/studentExists/{user_id}")
 async def student_exists(request, user_id: int):
     student = await Student.objects.filter(id=user_id).afirst()
     return { "exists": student is not None }
