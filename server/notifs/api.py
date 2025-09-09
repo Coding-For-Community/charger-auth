@@ -1,7 +1,6 @@
 import os
 
 import ninja
-import schedule
 
 from dotenv import load_dotenv
 from ninja.errors import HttpError
@@ -48,8 +47,8 @@ async def unregister_webpush(request, data: NeedsUserId):
     await SubscriptionData.objects.filter(student=student).adelete()
     return { "success": True }
 
-async def get_student(id: int):
-    student = await Student.objects.filter(id=id).afirst()
+async def get_student(student_id: int):
+    student = await Student.objects.filter(id=student_id).afirst()
     if not student:
         raise HttpError(400, "Student does not exist")
     return student
@@ -63,7 +62,9 @@ if settings.DEBUG:
         data = SubscriptionData.objects.filter(student=student).first()
         if data:
             run_webpush(data)
-        return { "success": True }
+            return { "success": True }
+        else:
+            return { "success": False }
 
 def run_webpush(data: SubscriptionData):
     try:

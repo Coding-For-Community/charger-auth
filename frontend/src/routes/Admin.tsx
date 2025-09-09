@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { BACKEND_URL } from '../utils/constants';
 import { createFileRoute } from '@tanstack/react-router';
+import { useAdminLoggedInCheck } from '../utils/tryAdminLogin';
 
 export const Route = createFileRoute('/Admin')({
   component: Admin,
@@ -13,6 +14,10 @@ export const Route = createFileRoute('/Admin')({
 function Admin() {
   const [opened, { toggle }] = useDisclosure();
   const [block, setBlock] = useState("A");
+  useEffect(() => {
+    absentStudentsQ.refetch()
+  }, [block])
+
   const absentStudentsQ = useQuery({
     queryKey: ["absentStudents"],
     queryFn: async () => {
@@ -20,10 +25,12 @@ function Admin() {
       return (await res.json())["students"] as { id: number, name: string }[]
     }
   })
-  useEffect(() => {
-    absentStudentsQ.refetch()
-  }, [block])
+  const loggedIn = useAdminLoggedInCheck()
   const absentStudents = absentStudentsQ.data ?? []
+
+  if (loggedIn.isFetching) {
+    return <div>Loading...</div>
+  }
 
   return (
     <AppShell

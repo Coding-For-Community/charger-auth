@@ -2,12 +2,15 @@ import os
 import ninja
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
+from django.contrib.auth import aauthenticate, alogin
+from django.http import HttpRequest, JsonResponse
 from django.shortcuts import redirect
 from dotenv import load_dotenv
 
 from checkin.core.api_methods import daily_reset
 from config import settings
 from oauth.models import BlackbaudToken
+from oauth.schema import ScannerAppLoginSchema
 
 load_dotenv()
 os.environ['AUTHLIB_INSECURE_TRANSPORT'] = "1" if settings.DEBUG else "0"
@@ -37,6 +40,7 @@ def oauth_client():
     """
     return oauth
 
+
 router = ninja.Router()
 
 @router.get("/")
@@ -65,6 +69,23 @@ async def authorize(request):
     return {
         "token": token
     }
+
+@router.post("/scannerAppLogin/")
+async def scanner_app_login(request: HttpRequest, data: ScannerAppLoginSchema):
+    user = await request.auser()
+    print(user)
+    if user.is_authenticated:
+        print("op1")
+        return { "success": True }
+    elif not data.verify:
+        print("op2")
+        return { "success": False }
+    else:
+        res = await aauthenticate(request, username="ScannerAppUser", password=data.password)
+        if res is None or not res.is_superuser:
+            return { "success": False }
+        await alogin(request, user=res)
+        return { "success": res.is_superuser }
 
 if settings.DEBUG:
     @router.get("/test/{path:api_route}")

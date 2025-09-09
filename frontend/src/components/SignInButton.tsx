@@ -3,25 +3,23 @@ import classes from './SignInButton.module.css'; // Import the CSS file for styl
 
 // Define the type for the component's props
 interface SignInButtonProps {
-  onClick: () => void;
-  buttonClassName?: string;
-  textClassName?: string;
-  buttonStyle?: React.CSSProperties;
-  textStyle?: React.CSSProperties;
+  buttonStyle?: React.CSSProperties
+  textStyle?: React.CSSProperties
+  submitting?: boolean
 }
 
-export function SignInButton({ onClick, buttonStyle, textStyle }: SignInButtonProps) {
+export function SignInButton(props: SignInButtonProps) {
   return (
     <button 
       className={classes.primaryButton}
-      onClick={onClick}
-      style={buttonStyle}
+      style={props.buttonStyle}
+      type="submit"
     >
       <span 
         className={classes.primaryButtonText}
-        style={textStyle}
+        style={props.textStyle}
       >
-        Sign In
+        {props.submitting ? "Signing In...." : "Sign In"}
       </span>
     </button>
   );

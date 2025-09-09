@@ -1,6 +1,6 @@
 import { rem, Stack, Text, TextInput } from "@mantine/core"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { SignInButton } from "../components/SignInButton"
 import { BACKEND_URL, BBID_KEY } from "../utils/constants"
 
@@ -12,7 +12,7 @@ function MobileAppSignIn() {
   const navigate = useNavigate()
   const [idValue, setIdValue] = useState('')
 
-  const bbid = window.sessionStorage.getItem(BBID_KEY)
+  const bbid = window.localStorage.getItem(BBID_KEY)
   useEffect(() => {
     console.log()
     if (bbid && bbid !== '') {
@@ -20,7 +20,8 @@ function MobileAppSignIn() {
     }
   }, [bbid])
 
-  async function handleStudentIdLogin() {
+  async function handleStudentIdLogin(e: FormEvent) {
+    e.preventDefault()
     if (idValue.trim() === '') {
       alert('Please enter your Student ID.');
       return;
@@ -31,7 +32,7 @@ function MobileAppSignIn() {
       window.alert("There is no user with id " + idValue + ".")
       return
     }
-    window.sessionStorage.setItem(BBID_KEY, idValue)
+    window.localStorage.setItem(BBID_KEY, idValue)
     await navigate({ to: "/MobileAppHome" })
   };
   
@@ -53,15 +54,17 @@ function MobileAppSignIn() {
       }}>
         Enter your Student ID to sign in
       </Text>
-      <TextInput
-        value={idValue}
-        onChange={e => setIdValue(e.target.value)}
-        placeholder="Student ID"
-        size="lg"
-        radius={12}
-        mb={rem(20)}
-      />
-      <SignInButton onClick={handleStudentIdLogin} />
+      <form onSubmit={handleStudentIdLogin}>
+        <TextInput
+          value={idValue}
+          onChange={e => setIdValue(e.target.value)}
+          placeholder="Student ID"
+          size="lg"
+          radius={12}
+          mb={rem(20)}
+        />
+        <SignInButton />
+      </form>
     </Stack>
   )
 

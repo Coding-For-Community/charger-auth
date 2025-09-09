@@ -126,7 +126,7 @@ async def __remind_student(student: Student):
         try:
             webpush(
                 subscription_info=data.subscription,
-                data="Looks like you haven't signed in for your free block - make sure to do that!",
+                data="Looks like you haven't signed in for your free block - make sure to do that in 5 min.",
                 vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
                 vapid_claims={
                     "sub": "mailto:" + data.student.email,

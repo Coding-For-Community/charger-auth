@@ -1,5 +1,4 @@
-import { ActionIcon, AppShell, Button, Group, Modal, rem, Stack, Switch, Text, Title } from "@mantine/core";
-import { useSessionStorage } from "@mantine/hooks";
+import { ActionIcon, AppShell, Button, Group, Modal, rem, Stack, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { QRCodeSVG } from 'qrcode.react';
@@ -30,7 +29,7 @@ function MobileAppHome() {
       return time * 1000
     }
   })
-  const bbid = window.sessionStorage.getItem(BBID_KEY)
+  const bbid = window.localStorage.getItem(BBID_KEY)
 
   async function updateNotifsEnabled() {
     const res = await fetch(BACKEND_URL + "/notifs/enabled/" + bbid)
@@ -73,7 +72,7 @@ function MobileAppHome() {
             <Button 
               bg="red"
               onClick={() => {
-                window.sessionStorage.removeItem(BBID_KEY)
+                window.localStorage.removeItem(BBID_KEY)
                 navigate({ to: "/MobileAppSignIn" })
               }}
             >
