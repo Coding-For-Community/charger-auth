@@ -1,10 +1,10 @@
-import { ActionIcon, AppShell, Burger, Checkbox, Group, Loader, Paper, rem, Select, Stack, Title } from '@mantine/core';
+import { ActionIcon, AppShell, Burger, Button, Checkbox, Group, Loader, Paper, rem, Select, Stack, Title } from '@mantine/core';
 import { useDisclosure, useLocalStorage } from '@mantine/hooks';
 import { IconReload } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { BACKEND_URL } from '../utils/constants';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useAdminLoggedInCheck } from '../utils/tryAdminLogin';
 
 export const Route = createFileRoute('/Admin')({
@@ -12,6 +12,7 @@ export const Route = createFileRoute('/Admin')({
 })
 
 function Admin() {
+  const navigate = useNavigate()
   const [opened, { toggle }] = useDisclosure();
   const [block, setBlock] = useState("A");
   useEffect(() => {
@@ -47,6 +48,9 @@ function Admin() {
             size="sm"
           />
           <Title order={3}>CA Free Block Check-in Admin</Title>
+          <Button onClick={() => navigate({ to: "/ScannerApp" })}>
+            Go to Scanner App
+          </Button>
         </Group>
       </AppShell.Header>
     

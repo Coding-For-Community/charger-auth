@@ -1,18 +1,17 @@
 # ChargerAuth
+
 ### TODO!!!!!!
-- Just use blackbaud for schedule
 - All students that checked in - add this too!!!!!
 - Only use "US Academic Schedule" for shenanigans
-- All student that haven't checked in
 
 ### Setup
 ```bash
-cd mobile-app
+cd frontend
 npm install
 
 cd ../server
 py -m venv .venv 
-.venv/Scripts/Activate # enables venv
+.venv/Scripts/Activate
 pip install requirements.txt
 py manage.py collectstatic
 ```
@@ -20,12 +19,12 @@ py manage.py collectstatic
 ### How to run: backend
 ```bash
 cd ../server
-.venv/Scripts/Activate # enables venv
+.venv/Scripts/Activate
 py main.py
 ```
 
-### How to run: frontend apps
+### How to run: frontend
 ```bash
-cd ../{app_name}
-npx expo start
+cd ../frontend
+npm run dev
 ```
