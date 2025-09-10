@@ -15,5 +15,5 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification('ChargerAuth', {
       body: payload,
     })
-  );
+  ); 
 });
