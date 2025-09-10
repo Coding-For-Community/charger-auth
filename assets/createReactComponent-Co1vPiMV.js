@@ -1,4 +1,4 @@
-import{r as t}from"./index-DJomgDRd.js";/**
+import{r as t}from"./index-DyKABxIm.js";/**
  * @license @tabler/icons-react v3.34.1 - MIT
  *
  * This source code is licensed under the MIT license.
