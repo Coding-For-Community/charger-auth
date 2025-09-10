@@ -42,8 +42,8 @@ class CustomASGIHandler(ASGIHandler):
                         from checkin.core.api_methods import daily_reset
                         from checkin.core.checkin_token import update_checkin_token
                         if not "-noReset" in sys.argv:
-                            await daily_reset()
-                        schedule.every().day.at("07:00").do(lambda: asyncio.create_task(daily_reset()))
+                            await daily_reset(False)
+                        schedule.every().day.at("07:00").do(lambda: asyncio.create_task(daily_reset(True)))
                         schedule.every(5).seconds.do(update_checkin_token)
                         print("got here 2")
                     except:

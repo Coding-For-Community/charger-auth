@@ -1,11 +1,12 @@
 import { ActionIcon, AppShell, Button, Group, Modal, rem, Stack, Text, Title } from "@mantine/core";
+import { IconSettings2 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from "react";
-import { BACKEND_URL, BBID_KEY } from "../utils/constants";
-import { IconSettings2 } from "@tabler/icons-react";
+import { BBID_KEY } from "../utils/constants";
 import { enablePushNotifs } from "../utils/enablePushNotifs";
+import { fetchBackend } from "../utils/fetchBackend";
 
 export const Route = createFileRoute('/MobileAppHome')({
   component: MobileAppHome,
@@ -18,7 +19,7 @@ function MobileAppHome() {
   const tokenQuery = useQuery({
     queryKey: ["qrCodeToken"],
     queryFn: async () => {
-      const res = await fetch(BACKEND_URL + "/checkin/token/")
+      const res = await fetchBackend("/checkin/token/")
       return (await res.json())
     },
     refetchInterval: (query) => {
@@ -27,17 +28,18 @@ function MobileAppHome() {
       }
       const time = query.state.data["time_until_refresh"]
       return time * 1000
-    }
+    },
+    refetchOnMount: "always"
   })
   const bbid = window.localStorage.getItem(BBID_KEY)
 
   async function updateNotifsEnabled() {
-    const res = await fetch(BACKEND_URL + "/notifs/enabled/" + bbid)
+    const res = await fetchBackend("/notifs/enabled/" + bbid)
     setNotifsEnabled((await res.json())["registered"])
   }
 
   async function disablePushNotifs() {
-    const res = await fetch(BACKEND_URL + "/notifs/unregister/", {
+    const res = await fetchBackend("/notifs/unregister/", {
       method: "POST",
       body: JSON.stringify({ user_id: bbid })
     })

@@ -1,4 +1,4 @@
-import { BACKEND_URL } from "./constants";
+import { fetchBackend } from "./fetchBackend";
 
 export async function enablePushNotifs(userId: number) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -18,7 +18,7 @@ export async function enablePushNotifs(userId: number) {
     const registration = await navigator.serviceWorker.ready;
 
     // 3. Get the VAPID public key from the backend
-    const response = await fetch(BACKEND_URL + '/notifs/publicKey/');
+    const response = await fetchBackend('/notifs/publicKey/');
     const json = await response.json()
     const vapidPublicKey = json.publicKey;
     const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
@@ -30,7 +30,7 @@ export async function enablePushNotifs(userId: number) {
     });
 
     // 5. Send the subscription object to the backend
-    await fetch(BACKEND_URL + '/notifs/register/', {
+    await fetchBackend('/notifs/register/', {
       method: "POST",
       body: JSON.stringify({
         subscription: subscription,

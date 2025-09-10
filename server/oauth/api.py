@@ -65,7 +65,7 @@ async def authorize(request):
         refresh_token=token["refresh_token"],
         expires_at=token["expires_at"]
     )
-    await daily_reset() # redo daily reset after the token is reinitialised
+    await daily_reset(False) # redo daily reset after the token is reinitialised
     return {
         "token": token
     }

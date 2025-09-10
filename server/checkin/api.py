@@ -16,9 +16,12 @@ router = ninja.Router()
 
 @router.get("/token/")
 async def checkin_token(request):
+    time_until_refresh = 5.1 - (datetime.now() - curr_token().timestamp).total_seconds()
+    if time_until_refresh < 0:
+        time_until_refresh = 0.5
     return {
-        "id": curr_token().uuid.int,
-        "time_until_refresh": 5.1 - (datetime.now() - curr_token().timestamp).total_seconds(),
+        "id": str(curr_token().uuid),
+        "time_until_refresh": time_until_refresh,
     }
 
 @router.get("/notCheckedInStudents/{free_block}/")
@@ -75,21 +78,21 @@ async def get_user_id(request, email: str):
 
 @router.get("/forceReset/", throttle=AnonRateThrottle('10/d'))
 async def force_reset(request):
-    await daily_reset()
+    await daily_reset(False)
     return { "success": True }
 
 @router.post("/run/")
 async def check_in_user(request, data: CheckInSchema):
     while is_resetting():
         await asyncio.sleep(0.5)
-    if data.checkin_token != curr_token().uuid.int and data.checkin_token != prev_token().uuid.int:
+    if data.checkin_token != str(curr_token().uuid) and data.checkin_token != str(prev_token().uuid):
         raise HttpError(403, "Invalid checkin token.")
     free_block = get_curr_free_block()
     if not free_block:
         raise HttpError(405, "No free block is available - your probably past the 10 min margin")
     student = await Student.objects.filter(id=data.user_id).afirst()
     if not student:
-        raise HttpError(400, "Student does not have a free block today")
+        raise HttpError(400, "Invalid Student ID")
     student.checked_in_blocks += free_block
     await student.asave()
     return { "success": True }

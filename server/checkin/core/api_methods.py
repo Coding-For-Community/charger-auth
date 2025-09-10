@@ -30,7 +30,7 @@ def get_curr_free_block() -> FreeBlock | None:
             return free_block
     return None
 
-async def daily_reset():
+async def daily_reset(remove_checked_in_blocks: bool):
     """
     Common initialization that should be scheduled to run every day.
     """
@@ -38,6 +38,10 @@ async def daily_reset():
     global _is_resetting
     _is_resetting = True
 
+    if remove_checked_in_blocks:
+        update_args = { "free_blocks": "", "checked_in_blocks": "" }
+    else:
+        update_args = { "free_blocks": "" }
     # Fetch data and reset Students objects
     today_as_str = _get_now().strftime("%m-%d-%Y")
     rosters_res, calendar_res, _ = await asyncio.gather(
@@ -50,7 +54,7 @@ async def daily_reset():
             f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
             headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
         ),
-        Student.objects.all().aupdate(free_blocks=""),
+        Student.objects.all().aupdate(**update_args),
     )
     if rosters_res.status_code != 200:
         raise Exception("Roster data did not initialize. Err: \n" + rosters_res.text)
@@ -65,10 +69,10 @@ async def daily_reset():
             continue
         for block in schedule_set["blocks"]:
             if block["block"] not in ALL_FREE_BLOCKS:
-                return
+                continue
             _free_blocks_today[block["block"]] = datetime.fromisoformat(block["start_time"]).time()
         break
-    print(_free_blocks_today)
+    print("Free blocks today: " + str(_free_blocks_today))
 
     # Then, initialize the students and the free blocks they have
     courses = rosters_res.json()
@@ -89,7 +93,7 @@ async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
     if user["leader"].get("type") == "Teacher":
         return
     data = user["user"]
-    student, _ = await Student.objects.aget_or_create(id=data["id"], checked_in_blocks="")
+    student, _ = await Student.objects.aget_or_create(id=data["id"], defaults={ "checked_in_blocks": "" })
     student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
     student.email = data["email"]
     if maybe_free_block:
@@ -97,7 +101,8 @@ async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
             raise Exception(f"Free block {maybe_free_block} not found in today's calendar")
         student.free_blocks += maybe_free_block
         block_time = _free_blocks_today[maybe_free_block]
-        run_time = time(block_time.hour, block_time.minute + 5)
+        run_time = time(block_time.hour, block_time.minute + 5).strftime("%H:%M")
+        print(run_time)
         schedule.every().day.at(run_time).do(lambda: asyncio.create_task(__remind_student(student)))
     await student.asave()
 
@@ -118,7 +123,7 @@ def _delta_time(now: datetime, target: time):
 
 # used for shimming time
 def _get_now():
-    return datetime.now()
+    return datetime(2025, 9, 8, 9)
 
 async def __remind_student(student: Student):
     data = await SubscriptionData.objects.filter(student=student).afirst()

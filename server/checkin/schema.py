@@ -6,7 +6,7 @@ from checkin.core.types import FreeBlock
 
 class CheckInSchema(Schema):
     user_id: int
-    checkin_token: int
+    checkin_token: str
 
 class CustomFreeBlockSchema(Schema):
     label: FreeBlock

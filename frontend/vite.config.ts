@@ -12,4 +12,12 @@ export default defineConfig({
     }),
     react()
   ],
+  base: "/charger-auth/",
+  server: {
+    cors: true,
+  },
+  build: {
+    outDir: "./build",
+    emptyOutDir: true
+  },
 })

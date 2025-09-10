@@ -14,6 +14,7 @@ import { Route as MobileAppSignInRouteImport } from './routes/MobileAppSignIn'
 import { Route as MobileAppHomeRouteImport } from './routes/MobileAppHome'
 import { Route as AdminLoginRouteImport } from './routes/AdminLogin'
 import { Route as AdminRouteImport } from './routes/Admin'
+import { Route as IndexRouteImport } from './routes/index'
 
 const ScannerAppRoute = ScannerAppRouteImport.update({
   id: '/ScannerApp',
@@ -40,8 +41,14 @@ const AdminRoute = AdminRouteImport.update({
   path: '/Admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
   '/MobileAppHome': typeof MobileAppHomeRoute
@@ -49,6 +56,7 @@ export interface FileRoutesByFullPath {
   '/ScannerApp': typeof ScannerAppRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
   '/MobileAppHome': typeof MobileAppHomeRoute
@@ -57,6 +65,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
   '/MobileAppHome': typeof MobileAppHomeRoute
@@ -66,6 +75,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/Admin'
     | '/AdminLogin'
     | '/MobileAppHome'
@@ -73,6 +83,7 @@ export interface FileRouteTypes {
     | '/ScannerApp'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/Admin'
     | '/AdminLogin'
     | '/MobileAppHome'
@@ -80,6 +91,7 @@ export interface FileRouteTypes {
     | '/ScannerApp'
   id:
     | '__root__'
+    | '/'
     | '/Admin'
     | '/AdminLogin'
     | '/MobileAppHome'
@@ -88,6 +100,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AdminLoginRoute: typeof AdminLoginRoute
   MobileAppHomeRoute: typeof MobileAppHomeRoute
@@ -132,10 +145,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AdminLoginRoute: AdminLoginRoute,
   MobileAppHomeRoute: MobileAppHomeRoute,

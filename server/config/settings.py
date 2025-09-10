@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,8 +26,10 @@ SECRET_KEY = 'django-insecure-9xo!qv483dm2+zk*p4=5wgrifdtsn!j_-n_n*au77@tnw!%)3x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = [
+    "crack-monkfish-monthly.ngrok-free.app",
+    "127.0.0.1"
+]
 
 # Application definition
 
@@ -56,11 +59,21 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "http://localhost:5174"
+    "http://localhost:5174",
+    "https://coding-for-community.github.io"
 ]
+
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = (
+    *default_headers,
+    "ngrok-skip-browser-warning"
+)
+
 SESSION_COOKIE_SAMESITE = 'None'
+
 CSRF_COOKIE_SAMESITE = 'None'
+
 SESSION_COOKIE_SECURE = True
 
 ROOT_URLCONF = 'config.urls'

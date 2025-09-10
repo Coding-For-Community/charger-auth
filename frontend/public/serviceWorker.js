@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-export type {};
-declare const self: ServiceWorkerGlobalScope;
+// If I get this to work with ts, uncomment that
+// declare const self: ServiceWorkerGlobalScope;
 
 self.addEventListener('push', (event) => {
   // Retrieve the textual payload from event.data (a PushMessageData object).
@@ -15,5 +15,5 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification('ChargerAuth', {
       body: payload,
     })
-  );
+  ); 
 });

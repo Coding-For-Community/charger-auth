@@ -2,7 +2,8 @@ import { rem, Stack, Text, TextInput } from "@mantine/core"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState, type FormEvent } from "react"
 import { SignInButton } from "../components/SignInButton"
-import { BACKEND_URL, BBID_KEY } from "../utils/constants"
+import { BBID_KEY } from "../utils/constants"
+import { fetchBackend } from "../utils/fetchBackend"
 
 export const Route = createFileRoute('/MobileAppSignIn')({
   component: MobileAppSignIn,
@@ -26,7 +27,7 @@ function MobileAppSignIn() {
       alert('Please enter your Student ID.');
       return;
     }
-    const isValidRes = await fetch(BACKEND_URL + "/checkin/studentExists/" + idValue)
+    const isValidRes = await fetchBackend("/checkin/studentExists/" + idValue)
     const isValid = (await isValidRes.json())["exists"]
     if (!isValid) {
       window.alert("There is no user with id " + idValue + ".")

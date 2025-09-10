@@ -1,33 +1,34 @@
 import { ActionIcon, AppShell, Burger, Button, Checkbox, Group, Loader, Paper, rem, Select, Stack, Title } from '@mantine/core';
 import { useDisclosure, useLocalStorage } from '@mantine/hooks';
 import { IconReload } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
-import { BACKEND_URL } from '../utils/constants';
+import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useAdminLoggedInCheck } from '../utils/tryAdminLogin';
+import { fetchBackend } from '../utils/fetchBackend';
 
 export const Route = createFileRoute('/Admin')({
   component: Admin,
 })
 
+interface Student {
+  id: number
+  name: string
+}
+
 function Admin() {
   const navigate = useNavigate()
   const [opened, { toggle }] = useDisclosure();
   const [block, setBlock] = useState("A");
-  useEffect(() => {
-    absentStudentsQ.refetch()
-  }, [block])
-
-  const absentStudentsQ = useQuery({
-    queryKey: ["absentStudents"],
-    queryFn: async () => {
-      const res = await fetch(BACKEND_URL + "/checkin/notCheckedInStudents/" + block)
-      return (await res.json())["students"] as { id: number, name: string }[]
+  const [absentStudents, setAbsentStudents] = useState([] as Student[])
+  const absentStudentsM = useMutation({
+    mutationFn: async (block: string) => {
+      const res = await fetchBackend("/checkin/notCheckedInStudents/" + block)
+      const students = (await res.json())["students"] as Student[]
+      setAbsentStudents(students)
     }
   })
   const loggedIn = useAdminLoggedInCheck()
-  const absentStudents = absentStudentsQ.data ?? []
 
   if (loggedIn.isFetching) {
     return <div>Loading...</div>
@@ -61,22 +62,23 @@ function Admin() {
             data={["A", "B", "C", "D", "E", "F", "G"]} 
             value={block}
             onChange={block => {
-              if (block != null) setBlock(block)
+              if (block != null) {
+                setBlock(block)
+                absentStudentsM.mutate(block)
+              }
             }}
             size="xs"
             maw={rem(80)}
           />
           {
-            absentStudentsQ.isFetching
+            absentStudentsM.isPending
               ? <Loader size={20} ml="auto" />
               : <ActionIcon 
                   variant="outline" 
                   ml="auto" 
                   color="rgb(0, 0, 0)" 
                   radius="lg"
-                  onClick={() => {
-                    absentStudentsQ.refetch()
-                  }}
+                  onClick={() => absentStudentsM.mutate(block)}
                 >
                   <IconReload size="20" />
                 </ActionIcon>
@@ -87,15 +89,6 @@ function Admin() {
             absentStudents.map(student => <StudentListing name={student.name} />)
           }
         </Stack>
-        
-        {/* <h1 className="list-title">Class Roster 🎓</h1>
-        <ul className="student-list">
-          {students.map((student, index) => (
-            <li key={index} className="student-list-item">
-              {student}
-            </li>
-          ))}
-        </ul> */}
       </AppShell.Main>
     </AppShell>
   );

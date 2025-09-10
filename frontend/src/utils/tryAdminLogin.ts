@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { fetchBackend } from "./fetchBackend";
 
 export async function tryAdminLogin(password: string, verify: boolean = true): Promise<boolean> {
-  const response = await fetch("http://127.0.0.1:8001/oauth/scannerAppLogin/", {
+  const response = await fetchBackend("/oauth/scannerAppLogin/", {
     method: "POST",
     credentials: 'include',
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ password, verify }),
   });
   if (!response.ok) throw new Error("Network response was not ok");
