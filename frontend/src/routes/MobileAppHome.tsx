@@ -1,5 +1,5 @@
 import { ActionIcon, AppShell, Button, Group, Modal, rem, Stack, Text, Title } from "@mantine/core";
-import { IconSettings2 } from "@tabler/icons-react";
+import { IconSettings2 } from "../components/icons.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { QRCodeSVG } from 'qrcode.react';
@@ -107,7 +107,6 @@ function MobileAppHome() {
           </Group>
         </AppShell.Header>
       </AppShell>
-      
     )
   } else if (tokenQuery.isError) {
     return (

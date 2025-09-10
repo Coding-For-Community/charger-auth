@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { SignInButton } from '../components/SignInButton';
@@ -10,14 +10,14 @@ export const Route = createFileRoute('/AdminLogin')({
 })
 
 function AdminLogin() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const loginM = useMutation<boolean, Error, string>({
     mutationFn: (pwd) => tryAdminLogin(pwd),
     onSuccess: (success) => {
       if (success) {
-        navigate({ to: "/Admin" })
+        router.history.back()
       } else {
         setError("Invalid password. Please try again.");
       }

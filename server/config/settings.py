@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
 from corsheaders.defaults import default_headers
 
@@ -24,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-9xo!qv483dm2+zk*p4=5wgrifdtsn!j_-n_n*au77@tnw!%)3x'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = "-prod" not in sys.argv
 
 ALLOWED_HOSTS = [
     "crack-monkfish-monthly.ngrok-free.app",
@@ -102,7 +103,7 @@ ASGI_APPLICATION = 'config.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'dev.sqlite3' if DEBUG else 'prod.sqlite3',
     }
 }
 

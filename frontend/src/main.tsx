@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { routeTree } from './routeTree.gen'
 import { createHashHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 
+// By default, everything in the "public" directory is considered to be at the root.
 navigator.serviceWorker?.register("../charger-auth/serviceWorker.js");
 const qClient = new QueryClient();
 

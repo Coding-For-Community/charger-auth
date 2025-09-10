@@ -73,12 +73,9 @@ async def authorize(request):
 @router.post("/scannerAppLogin/")
 async def scanner_app_login(request: HttpRequest, data: ScannerAppLoginSchema):
     user = await request.auser()
-    print(user)
     if user.is_authenticated:
-        print("op1")
         return { "success": True }
     elif not data.verify:
-        print("op2")
         return { "success": False }
     else:
         res = await aauthenticate(request, username="ScannerAppUser", password=data.password)

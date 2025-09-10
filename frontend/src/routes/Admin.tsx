@@ -1,11 +1,11 @@
-import { ActionIcon, AppShell, Burger, Button, Checkbox, Group, Loader, Paper, rem, Select, Stack, Title } from '@mantine/core';
+import { ActionIcon, AppShell, Burger, Checkbox, Group, Loader, Paper, rem, ScrollArea, Select, TextInput, Title } from '@mantine/core';
 import { useDisclosure, useLocalStorage } from '@mantine/hooks';
-import { IconReload } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useAdminLoggedInCheck } from '../utils/tryAdminLogin';
+import { IconReload } from '../components/icons.tsx';
 import { fetchBackend } from '../utils/fetchBackend';
+import { useAdminLoggedInCheck } from '../utils/tryAdminLogin';
 
 export const Route = createFileRoute('/Admin')({
   component: Admin,
@@ -16,19 +16,31 @@ interface Student {
   name: string
 }
 
+type CheckInMode = "Not checked in" | "Checked in"
+
 function Admin() {
-  const navigate = useNavigate()
   const [opened, { toggle }] = useDisclosure();
+  const [mode, setMode] = useState<CheckInMode>("Not checked in")
   const [block, setBlock] = useState("A");
+  const [searchQ, setSearchQ] = useState("");
   const [absentStudents, setAbsentStudents] = useState([] as Student[])
   const absentStudentsM = useMutation({
-    mutationFn: async (block: string) => {
-      const res = await fetchBackend("/checkin/notCheckedInStudents/" + block)
+    mutationFn: async () => {
+      let endpoint = "/checkin/"
+      endpoint += mode === "Checked in" ? "checkedInStudents/" : "notCheckedInStudents/"
+      endpoint += block
+      const res = await fetchBackend(endpoint)
       const students = (await res.json())["students"] as Student[]
       setAbsentStudents(students)
     }
   })
   const loggedIn = useAdminLoggedInCheck()
+
+  function isSearched(student: Student) {
+    return searchQ === "" || 
+      student.name.toLowerCase().startsWith(searchQ.toLowerCase()) || 
+      student.id.toString() === searchQ
+  }
 
   if (loggedIn.isFetching) {
     return <div>Loading...</div>
@@ -40,8 +52,8 @@ function Admin() {
       header={{ height: 60 }}
       navbar={{width: 0, breakpoint: 'sm'}}
     >
-      <AppShell.Header>
-        <Group mt={rem(15)} mx={rem(15)} gap={rem(10)}>
+      <AppShell.Header p={rem(15)}>
+        <Group gap={rem(10)}>
           <Burger
             opened={opened}
             onClick={toggle}
@@ -49,46 +61,61 @@ function Admin() {
             size="sm"
           />
           <Title order={3}>CA Free Block Check-in Admin</Title>
-          <Button onClick={() => navigate({ to: "/ScannerApp" })}>
-            Go to Scanner App
-          </Button>
         </Group>
       </AppShell.Header>
     
-      <AppShell.Main maw={rem(600)}>
+      <AppShell.Main maw={rem(700)}>
         <Group gap={rem(10)} mb={rem(20)}>
-          <Title order={4}>Not checked in students for </Title>
+          <Select
+            data={["Not checked in", "Checked in"]} 
+            size="sm"
+            maw={rem(150)}
+            value={mode}
+            onChange={(m) => {
+              if (m == null) return
+              setMode(m as CheckInMode)
+              absentStudentsM.mutate()
+            }}
+          />
+          <Title order={4}> students for </Title>
           <Select
             data={["A", "B", "C", "D", "E", "F", "G"]} 
             value={block}
             onChange={block => {
-              if (block != null) {
-                setBlock(block)
-                absentStudentsM.mutate(block)
-              }
+              if (block == null) return
+              setBlock(block)
+              absentStudentsM.mutate()
             }}
-            size="xs"
+            size="sm"
             maw={rem(80)}
+          />
+          <TextInput 
+            ml="auto" 
+            value={searchQ} 
+            onChange={e => setSearchQ(e.target.value)}
+            placeholder="Search by student name/id" 
+            w={rem(200)}
           />
           {
             absentStudentsM.isPending
-              ? <Loader size={20} ml="auto" />
+              ? <Loader size={30} />
               : <ActionIcon 
                   variant="outline" 
-                  ml="auto" 
                   color="rgb(0, 0, 0)" 
                   radius="lg"
-                  onClick={() => absentStudentsM.mutate(block)}
+                  onClick={() => absentStudentsM.mutate()}
                 >
                   <IconReload size="20" />
                 </ActionIcon>
           }
         </Group>
-        <Stack gap={rem(10)}>
+        <ScrollArea offsetScrollbars="y" h={rem(500)}>
           {
-            absentStudents.map(student => <StudentListing name={student.name} />)
+            absentStudents
+              .filter(isSearched)
+              .map(student => <StudentListing name={student.name} />)
           }
-        </Stack>
+        </ScrollArea>
       </AppShell.Main>
     </AppShell>
   );
@@ -110,10 +137,11 @@ function StudentListing({ name }: { name: string }) {
   return (
     <Paper 
       shadow="xs" 
-      key={name}
       radius={rem(10)} 
       p={rem(10)} 
       bg="rgb(250, 251, 254)"
+      key={name}
+      mb={rem(10)}
       onClick={() => setChecked(!checked)}
     >
       <Group justify="space-between">

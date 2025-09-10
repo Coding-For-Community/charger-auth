@@ -68,5 +68,4 @@ function MobileAppSignIn() {
       </form>
     </Stack>
   )
-
 }

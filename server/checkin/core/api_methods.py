@@ -7,6 +7,8 @@ from pywebpush import webpush, WebPushException
 from checkin.core.types import FreeBlock, ALL_FREE_BLOCKS
 from checkin.models import Student
 from dotenv import load_dotenv
+
+from config import settings
 from notifs.models import SubscriptionData
 
 load_dotenv()
@@ -94,7 +96,9 @@ async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
         return
     data = user["user"]
     student, _ = await Student.objects.aget_or_create(id=data["id"], defaults={ "checked_in_blocks": "" })
-    student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
+    student.name = f"{data['first_name']} {data['last_name']}"
+    if data['middle_name']:
+        student.name = student.name.replace(" ", f" {data['middle_name']} ")
     student.email = data["email"]
     if maybe_free_block:
         if maybe_free_block not in _free_blocks_today:
@@ -123,7 +127,10 @@ def _delta_time(now: datetime, target: time):
 
 # used for shimming time
 def _get_now():
-    return datetime(2025, 9, 8, 9)
+    if settings.DEBUG:
+        return datetime(2025, 9, 10, 9)
+    else:
+        return datetime.now()
 
 async def __remind_student(student: Student):
     data = await SubscriptionData.objects.filter(student=student).afirst()

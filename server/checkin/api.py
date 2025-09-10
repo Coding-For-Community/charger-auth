@@ -38,6 +38,20 @@ async def not_checked_in_students(request, free_block: FreeBlock):
             })
     return { "students": output }
 
+@router.get("/checkedInStudents/{free_block}/")
+async def checked_in_students(request, free_block: FreeBlock):
+    if free_block not in ALL_FREE_BLOCKS:
+        raise HttpError(400, "Invalid free block: " + free_block)
+    students = Student.objects.all()
+    output = []
+    async for student in students:
+        if free_block in student.checked_in_blocks:
+            output.append({
+                "id": student.id,
+                "name": student.name,
+            })
+    return { "students": output }
+
 # noinspection PyTypeChecker
 @router.get("/freeBlockNow/{user_id}/")
 async def free_block_now(request, user_id: int):
@@ -89,7 +103,7 @@ async def check_in_user(request, data: CheckInSchema):
         raise HttpError(403, "Invalid checkin token.")
     free_block = get_curr_free_block()
     if not free_block:
-        raise HttpError(405, "No free block is available - your probably past the 10 min margin")
+        raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
     student = await Student.objects.filter(id=data.user_id).afirst()
     if not student:
         raise HttpError(400, "Invalid Student ID")
