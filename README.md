@@ -34,3 +34,7 @@ py manage.py startdailyreset
 cd ../frontend
 npm run dev
 ```
+
+### How to run: production
+To run things for production, just add the ```-prod``` flag to all commands you run.
+In addition, make sure to create a superuser account with ```py manage.py createsuperuser -prod```.
