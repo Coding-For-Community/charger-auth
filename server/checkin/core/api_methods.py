@@ -39,6 +39,7 @@ async def daily_reset(remove_checked_in_blocks: bool):
     from oauth.api import oauth_client
     global _is_resetting
     _is_resetting = True
+    client = await oauth_client()
 
     if remove_checked_in_blocks:
         update_args = { "free_blocks": "", "checked_in_blocks": "" }
@@ -47,11 +48,11 @@ async def daily_reset(remove_checked_in_blocks: bool):
     # Fetch data and reset Students objects
     today_as_str = _get_now().strftime("%m-%d-%Y")
     rosters_res, calendar_res, _ = await asyncio.gather(
-        oauth_client().get(
+        client.get(
             "https://api.sky.blackbaud.com/school/v1/academics/rosters",
             headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
         ),
-        oauth_client().get(
+        client.get(
             "https://api.sky.blackbaud.com/school/v1/academics/schedules/master?"
             f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
             headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}

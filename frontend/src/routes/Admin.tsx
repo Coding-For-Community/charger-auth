@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Burger, Checkbox, Group, Loader, Paper, rem, ScrollArea, Select, TextInput, Title } from '@mantine/core';
+import { ActionIcon, AppShell, Burger, Checkbox, Divider, Group, Loader, Paper, rem, ScrollArea, Select, TextInput, Title } from '@mantine/core';
 import { useDisclosure, useLocalStorage } from '@mantine/hooks';
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -65,12 +65,15 @@ function Admin() {
       </AppShell.Header>
     
       <AppShell.Main maw={rem(700)}>
-        <Group gap={rem(10)} mb={rem(20)}>
+        <Group gap={rem(10)} mb={rem(10)}>
           <Select
             data={["Not checked in", "Checked in"]} 
             size="sm"
             maw={rem(150)}
             value={mode}
+            styles={{
+              root: { fontWeight: "bold" }
+            }}
             onChange={(m) => {
               if (m == null) return
               setMode(m as CheckInMode)
@@ -88,6 +91,9 @@ function Admin() {
             }}
             size="sm"
             maw={rem(80)}
+            styles={{
+              root: { fontWeight: "bold" }
+            }}
           />
           <TextInput 
             ml="auto" 
@@ -109,6 +115,7 @@ function Admin() {
                 </ActionIcon>
           }
         </Group>
+        <Divider mb={rem(10)} />
         <ScrollArea offsetScrollbars="y" h={rem(500)}>
           {
             absentStudents

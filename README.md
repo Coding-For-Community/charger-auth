@@ -22,6 +22,12 @@ cd ../server
 .venv/Scripts/Activate
 py main.py
 ```
+Then, create a new terminal and run
+```bash
+cd ../server
+.venv/Scripts/Activate
+py manage.py startdailyreset
+```
 
 ### How to run: frontend
 ```bash

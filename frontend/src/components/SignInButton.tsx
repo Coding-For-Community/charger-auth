@@ -6,6 +6,7 @@ interface SignInButtonProps {
   buttonStyle?: React.CSSProperties
   textStyle?: React.CSSProperties
   submitting?: boolean
+  onClick?: () => void
 }
 
 export function SignInButton(props: SignInButtonProps) {
@@ -14,6 +15,7 @@ export function SignInButton(props: SignInButtonProps) {
       className={classes.primaryButton}
       style={props.buttonStyle}
       type="submit"
+      onClick={props.onClick}
     >
       <span 
         className={classes.primaryButtonText}

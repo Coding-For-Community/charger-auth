@@ -23,10 +23,6 @@ async def update_token(token, refresh_token=None, access_token=None):
     item.expires_at = token['expires_at']
     await item.asave()
 
-async def init_token():
-    token = await BlackbaudToken.objects.afirst()
-    oauth.token = token.to_token() if token else None
-
 oauth = AsyncOAuth2Client(
     client_id=os.environ["OAUTH_CLIENT_ID"],
     client_secret=os.environ["OAUTH_CLIENT_SECRET"],
@@ -34,12 +30,15 @@ oauth = AsyncOAuth2Client(
     token_endpoint="https://oauth2.sky.blackbaud.com/token",
 )
 
-def oauth_client():
+async def oauth_client():
     """
     Fetches the oauth client, used for get requests to the blackbaud api.
     """
+    if oauth.token is None:
+        token = await BlackbaudToken.objects.afirst()
+        oauth.token = token.to_token() if token else None
+        print("Blackbaud token was just initialized.")
     return oauth
-
 
 router = ninja.Router()
 

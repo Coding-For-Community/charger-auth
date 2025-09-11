@@ -6,7 +6,7 @@ from ninja.errors import HttpError
 from ninja.throttling import AnonRateThrottle
 
 from checkin.core.api_methods import get_curr_free_block, is_resetting, free_blocks_today, daily_reset
-from checkin.core.checkin_token import prev_token, curr_token
+from checkin.core.checkin_token import prev_token, curr_token, update_checkin_token
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import Student
 from checkin.schema import CheckInSchema
@@ -16,12 +16,16 @@ router = ninja.Router()
 
 @router.get("/token/")
 async def checkin_token(request):
-    time_until_refresh = 5.1 - (datetime.now() - curr_token().timestamp).total_seconds()
-    if time_until_refresh < 0:
-        time_until_refresh = 0.5
+    delta_secs = (datetime.now() - curr_token().timestamp).total_seconds()
+    if delta_secs < 0 or delta_secs > 5:
+        update_checkin_token()
+        return {
+            "id": str(curr_token().uuid),
+            "time_until_refresh": 5,
+        }
     return {
         "id": str(curr_token().uuid),
-        "time_until_refresh": time_until_refresh,
+        "time_until_refresh": 5 - delta_secs,
     }
 
 @router.get("/notCheckedInStudents/{free_block}/")
@@ -92,7 +96,8 @@ async def get_user_id(request, email: str):
 
 @router.get("/forceReset/", throttle=AnonRateThrottle('10/d'))
 async def force_reset(request):
-    await daily_reset(False)
+    if not is_resetting():
+        await daily_reset(False)
     return { "success": True }
 
 @router.post("/run/")
