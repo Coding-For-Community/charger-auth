@@ -1,16 +1,39 @@
 import { ActionIcon, AppShell, Button, Group, Modal, rem, Stack, Text, Title } from "@mantine/core";
-import { IconSettings2 } from "../components/icons.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from "react";
-import { BBID_KEY } from "../utils/constants";
+import { IconSettings2 } from "../components/icons.tsx";
+import { EMAIL_KEY } from "../utils/constants";
 import { enablePushNotifs } from "../utils/enablePushNotifs";
 import { fetchBackend } from "../utils/fetchBackend";
+import { AuthenticatedTemplate, UnauthenticatedTemplate, useMsalAuthentication } from "@azure/msal-react";
+import { InteractionType } from "@azure/msal-browser";
 
 export const Route = createFileRoute('/MobileAppHome')({
   component: MobileAppHome,
 })
+
+
+function MobileApp() {
+  const {login, result, error} = useMsalAuthentication(InteractionType.Popup);
+  result?.account?.username
+  return (
+    <>
+      <AuthenticatedTemplate>
+        <MobileAppHome />
+      </AuthenticatedTemplate>
+      <UnauthenticatedTemplate>
+        
+      </UnauthenticatedTemplate>
+    </>
+  )
+}
+
+
+function RetryScreen() {
+
+}
 
 function MobileAppHome() {
   const navigate = useNavigate()
@@ -31,17 +54,17 @@ function MobileAppHome() {
     },
     refetchOnMount: "always"
   })
-  const bbid = window.localStorage.getItem(BBID_KEY)
+  const emailB64 = window.localStorage.getItem(EMAIL_KEY)
 
   async function updateNotifsEnabled() {
-    const res = await fetchBackend("/notifs/enabled/" + bbid)
+    const res = await fetchBackend("/notifs/enabled/" + emailB64)
     setNotifsEnabled((await res.json())["registered"])
   }
 
   async function disablePushNotifs() {
     const res = await fetchBackend("/notifs/unregister/", {
       method: "POST",
-      body: JSON.stringify({ user_id: bbid })
+      body: JSON.stringify({ email: emailB64 })
     })
     if (res.status != 200) {
       console.error("Push notifs WERE NOT DISABLED: " + res.statusText)
@@ -49,12 +72,12 @@ function MobileAppHome() {
   }
 
   useEffect(() => {
-    if (!bbid || bbid === '') {
+    if (!emailB64 || emailB64 === '') {
       navigate({ to: "/MobileAppSignIn" })
     } else {
       updateNotifsEnabled()
     }
-  }, [bbid])
+  }, [emailB64])
 
   if (tokenQuery.isSuccess) {
     return (
@@ -67,14 +90,14 @@ function MobileAppHome() {
                 ? <Button bg="gray" onClick={disablePushNotifs}>
                     Disable Push Notifs
                   </Button> 
-                : <Button onClick={() => enablePushNotifs(parseInt(bbid!, 10))}>
+                : <Button onClick={() => enablePushNotifs(parseInt(emailB64!, 10))}>
                     Enable Push Notifs
                   </Button>
             }
             <Button 
               bg="red"
               onClick={() => {
-                window.localStorage.removeItem(BBID_KEY)
+                window.localStorage.removeItem(EMAIL_KEY)
                 navigate({ to: "/MobileAppSignIn" })
               }}
             >
@@ -90,7 +113,7 @@ function MobileAppHome() {
             minHeight: "100vh"
           }}>
             <Title order={3} style={{textAlign: "center"}}>Rotate the phone 180 degrees so the scanner can see this QR code: </Title>
-            <QRCodeSVG value={bbid + ";" + tokenQuery.data["id"]} size={200} />
+            <QRCodeSVG value={emailB64 + ";" + tokenQuery.data["id"]} size={200} />
           </Stack>
         </AppShell.Main>
 

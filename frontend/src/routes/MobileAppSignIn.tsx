@@ -2,7 +2,7 @@ import { rem, Stack, Text, TextInput } from "@mantine/core"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState, type FormEvent } from "react"
 import { SignInButton } from "../components/SignInButton"
-import { BBID_KEY } from "../utils/constants"
+import { EMAIL_KEY } from "../utils/constants"
 import { fetchBackend } from "../utils/fetchBackend"
 
 export const Route = createFileRoute('/MobileAppSignIn')({
@@ -13,7 +13,7 @@ function MobileAppSignIn() {
   const navigate = useNavigate()
   const [idValue, setIdValue] = useState('')
 
-  const bbid = window.localStorage.getItem(BBID_KEY)
+  const bbid = window.localStorage.getItem(EMAIL_KEY)
   useEffect(() => {
     console.log()
     if (bbid && bbid !== '') {
@@ -33,7 +33,7 @@ function MobileAppSignIn() {
       window.alert("There is no user with id " + idValue + ".")
       return
     }
-    window.localStorage.setItem(BBID_KEY, idValue)
+    window.localStorage.setItem(EMAIL_KEY, idValue)
     await navigate({ to: "/MobileAppHome" })
   };
   

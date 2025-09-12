@@ -14,6 +14,5 @@ class Student(models.Model):
         validators=[RegexValidator(r"[A-G]*")],
         blank=True
     )
-    id = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=100, default="[Unknown]")
-    email = models.EmailField(max_length=200, default="[Unknown]")
+    email = models.EmailField(max_length=200, primary_key=True)

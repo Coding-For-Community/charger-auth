@@ -1,6 +1,7 @@
 import asyncio
 import ninja
 
+from base64 import b64decode
 from datetime import time, datetime
 from ninja.errors import HttpError
 from ninja.throttling import AnonRateThrottle
@@ -57,9 +58,9 @@ async def checked_in_students(request, free_block: FreeBlock):
     return { "students": output }
 
 # noinspection PyTypeChecker
-@router.get("/freeBlockNow/{user_id}/")
-async def free_block_now(request, user_id: int):
-    student = await Student.objects.filter(id=user_id).afirst()
+@router.get("/freeBlockNow/{email_b64}/")
+async def free_block_now(request, email_b64: str):
+    student = await get_student(email_b64)
     curr_free_block = get_curr_free_block()
     if not student or not curr_free_block:
         return { "has_free_block": False }
@@ -68,16 +69,16 @@ async def free_block_now(request, user_id: int):
         "has_free_block": curr_free_block in student.free_blocks
     }
 
-@router.get("/studentExists/{user_id}")
-async def student_exists(request, user_id: int):
-    student = await Student.objects.filter(id=user_id).afirst()
+@router.get("/studentExists/{email_b64}")
+async def student_exists(request, email_b64: str):
+    student = await get_student(email_b64)
     return { "exists": student is not None }
 
-@router.get("/userFreeBlocks/{user_id}/")
-async def all_user_free_blocks(request, user_id: int):
-    student = await Student.objects.filter(id=user_id).afirst()
+@router.get("/userFreeBlocks/{email_b64}/")
+async def all_user_free_blocks(request, email_b64: str):
+    student = await get_student(email_b64)
     if not student:
-        raise HttpError(400, "No student exists with id " + str(user_id))
+        raise HttpError(400, "Invalid email")
     result = []
     for free_block, start_time in free_blocks_today():
         if free_block in student.free_blocks:
@@ -87,14 +88,7 @@ async def all_user_free_blocks(request, user_id: int):
             })
     return { "free_blocks": result }
 
-@router.get("/userIdOf/{email}/")
-async def get_user_id(request, email: str):
-    student = await Student.objects.filter(email=email).afirst()
-    if not student:
-        raise HttpError(400, "No student exists with email " + email)
-    return { "user_id": student.id }
-
-@router.get("/forceReset/", throttle=AnonRateThrottle('10/d'))
+@router.get("/forceReset/", throttle=AnonRateThrottle('3/d'))
 async def force_reset(request):
     if not is_resetting():
         await daily_reset(False)
@@ -109,9 +103,9 @@ async def check_in_user(request, data: CheckInSchema):
     free_block = get_curr_free_block()
     if not free_block:
         raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
-    student = await Student.objects.filter(id=data.user_id).afirst()
+    student = await Student.objects.filter(email=b64decode(data.email_b64)).afirst()
     if not student:
-        raise HttpError(400, "Invalid Student ID")
+        raise HttpError(400, "Invalid Student")
     student.checked_in_blocks += free_block
     await student.asave()
     return { "success": True }
@@ -120,3 +114,6 @@ if settings.DEBUG:
     @router.delete("/clear/")
     async def reset_data_debug(request):
         await Student.objects.all().adelete()
+
+def get_student(email_b64: str):
+    return Student.objects.filter(email=b64decode(email_b64)).afirst()

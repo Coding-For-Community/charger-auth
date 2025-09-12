@@ -5,7 +5,7 @@ from checkin.core.types import FreeBlock
 # Schemas are representations of the JSON that goes in and out of the server.
 
 class CheckInSchema(Schema):
-    user_id: int
+    email_b64: str
     checkin_token: str
 
 class CustomFreeBlockSchema(Schema):

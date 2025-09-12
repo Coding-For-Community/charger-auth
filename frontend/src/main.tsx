@@ -6,13 +6,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { routeTree } from './routeTree.gen'
 import { createHashHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-
-// By default, everything in the "public" directory is considered to be at the root.
-navigator.serviceWorker?.register("../charger-auth/serviceWorker.js");
-const qClient = new QueryClient();
-
-// Create a new router instance
-const router = createRouter({ routeTree, history: createHashHistory() })
+import { MsalProvider } from '@azure/msal-react';
+import { PublicClientApplication } from "@azure/msal-browser";
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {
@@ -21,12 +16,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+// By default, everything in the "public" directory is considered to be at the root.
+navigator.serviceWorker?.register("../charger-auth/serviceWorker.js");
+
+const qClient = new QueryClient();
+const router = createRouter({ routeTree, history: createHashHistory() })
+const pca = new PublicClientApplication({
+  auth: { clientId: "TODO" },
+  
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider>
       <QueryClientProvider client={qClient}>
-        <RouterProvider router={router} />
+        <MsalProvider instance={pca}>
+          <RouterProvider router={router} />
+        </MsalProvider>
       </QueryClientProvider>
     </MantineProvider>
-  </StrictMode>,
+  </StrictMode>
 )

@@ -96,11 +96,13 @@ async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
     if user["leader"].get("type") == "Teacher":
         return
     data = user["user"]
-    student, _ = await Student.objects.aget_or_create(id=data["id"], defaults={ "checked_in_blocks": "" })
+    email = data["email"].strip()
+    if not email:
+        return
+    student, _ = await Student.objects.aget_or_create(email=email, defaults={ "checked_in_blocks": "" })
     student.name = f"{data['first_name']} {data['last_name']}"
     if data['middle_name']:
         student.name = student.name.replace(" ", f" {data['middle_name']} ")
-    student.email = data["email"]
     if maybe_free_block:
         if maybe_free_block not in _free_blocks_today:
             raise Exception(f"Free block {maybe_free_block} not found in today's calendar")
