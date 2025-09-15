@@ -1,5 +1,4 @@
 import asyncio
-import time
 import schedule
 
 from django.core.management import BaseCommand
@@ -19,13 +18,16 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            self.stdout.write(self.style.SUCCESS(f"Periodic daily reset task started."))
-            asyncio.run(daily_reset(False))
-            schedule.every().day.at(options['time']).do(
-                lambda: asyncio.run(daily_reset(True))
-            )
-            while True:
-                schedule.run_pending()
-                time.sleep(1)
+            asyncio.run(self.run_cmd(options['time']))
         except KeyboardInterrupt:
-            pass
+            return
+
+    async def run_cmd(self, scheduled_time: str):
+        self.stdout.write(self.style.SUCCESS(f"Periodic daily reset task started."))
+        await daily_reset(False)
+        schedule.every().day.at(scheduled_time).do(
+            lambda: asyncio.create_task(daily_reset(True))
+        )
+        while True:
+            schedule.run_pending()
+            await asyncio.sleep(1)

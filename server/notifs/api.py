@@ -59,7 +59,7 @@ if settings.DEBUG:
             return { "success": False }
 
 async def get_student(email_b64: str):
-    student = await Student.objects.filter(email=b64decode(email_b64)).afirst()
+    student = await Student.objects.filter(email=b64decode(email_b64).decode('utf-8')).afirst()
     if not student:
         raise HttpError(400, "Student does not exist")
     return student

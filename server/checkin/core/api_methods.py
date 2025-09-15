@@ -3,6 +3,8 @@ import os
 import schedule
 
 from datetime import datetime, time
+
+from django.utils.http import urlencode
 from pywebpush import webpush, WebPushException
 from checkin.core.types import FreeBlock, ALL_FREE_BLOCKS
 from checkin.models import Student
@@ -48,14 +50,10 @@ async def daily_reset(remove_checked_in_blocks: bool):
     # Fetch data and reset Students objects
     today_as_str = _get_now().strftime("%m-%d-%Y")
     rosters_res, calendar_res, _ = await asyncio.gather(
+        client.get("/academics/rosters"),
         client.get(
-            "https://api.sky.blackbaud.com/school/v1/academics/rosters",
-            headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
-        ),
-        client.get(
-            "https://api.sky.blackbaud.com/school/v1/academics/schedules/master?"
+            f"/academics/schedules/master?"
             f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
-            headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
         ),
         Student.objects.all().aupdate(**update_args),
     )
@@ -92,6 +90,22 @@ async def daily_reset(remove_checked_in_blocks: bool):
     # Finally, declare resetting as done
     _is_resetting = False
 
+async def fetch_student_img(email: str) -> str | None:
+    from oauth.api import oauth_client
+    client = await oauth_client()
+    args = urlencode({
+        "roles": 4184,
+        "email": email,
+    })
+    id_fetch_res = (await client.get(f"/users?{args}")).json()
+    print(id_fetch_res)
+    res = await client.get(f"/users/{id_fetch_res["value"][0]["id"]}")
+    profile_pics = res.json().get("profile_pictures")
+    if profile_pics and "large_filename_url" in profile_pics:
+        return "https:" + profile_pics["large_filename_url"]
+    else:
+        return None
+
 async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
     if user["leader"].get("type") == "Teacher":
         return
@@ -101,16 +115,15 @@ async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
         return
     student, _ = await Student.objects.aget_or_create(email=email, defaults={ "checked_in_blocks": "" })
     student.name = f"{data['first_name']} {data['last_name']}"
-    if data['middle_name']:
+    if 'middle_name' in data:
         student.name = student.name.replace(" ", f" {data['middle_name']} ")
     if maybe_free_block:
         if maybe_free_block not in _free_blocks_today:
             raise Exception(f"Free block {maybe_free_block} not found in today's calendar")
         student.free_blocks += maybe_free_block
         block_time = _free_blocks_today[maybe_free_block]
-        run_time = time(block_time.hour, block_time.minute + 5).strftime("%H:%M")
-        print(run_time)
-        schedule.every().day.at(run_time).do(lambda: asyncio.create_task(__remind_student(student)))
+        reminder_time = time(block_time.hour, block_time.minute + 5).strftime("%H:%M")
+        schedule.every().day.at(reminder_time).do(lambda: asyncio.create_task(__remind_student(student)))
     await student.asave()
 
 def _free_block_of(course: dict) -> FreeBlock | None:
@@ -159,3 +172,4 @@ async def __remind_student(student: Student):
                     extra.message
                 )
     return schedule.CancelJob()
+

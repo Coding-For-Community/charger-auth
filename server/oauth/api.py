@@ -28,6 +28,8 @@ oauth = AsyncOAuth2Client(
     client_secret=os.environ["OAUTH_CLIENT_SECRET"],
     update_token=update_token,
     token_endpoint="https://oauth2.sky.blackbaud.com/token",
+    base_url="https://api.sky.blackbaud.com/school/v1/",
+    headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
 )
 
 async def oauth_client():
@@ -43,8 +45,9 @@ async def oauth_client():
 router = ninja.Router()
 
 @router.get("/")
-def login(request):
-    auth_url, _ = oauth.create_authorization_url(
+async def login(request):
+    client = await oauth_client()
+    auth_url, _ = client.create_authorization_url(
         "https://oauth2.sky.blackbaud.com/authorization",
         redirect_uri=request.build_absolute_uri("/oauth/authorize/")
     )
@@ -53,7 +56,8 @@ def login(request):
 
 @router.get("/authorize/")
 async def authorize(request):
-    token = await oauth.fetch_token(
+    client = await oauth_client()
+    token = await client.fetch_token(
         authorization_response=request.build_absolute_uri(),
         redirect_uri=request.build_absolute_uri("/oauth/authorize/")
     )
@@ -86,14 +90,10 @@ async def scanner_app_login(request: HttpRequest, data: ScannerAppLoginSchema):
 if settings.DEBUG:
     @router.get("/test/{path:api_route}")
     async def test(request, api_route: str):
+        client = await oauth_client()
         args_str = request.build_absolute_uri()
         args_str = args_str[args_str.index("?"):] if "?" in args_str else ""
-        res = await oauth.get(
-            "https://api.sky.blackbaud.com/school/v1/" + api_route + args_str,
-            headers={
-                'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]
-            }
-        )
+        res = await client.get(api_route + args_str)
         if res.status_code != 200:
             return res.text
         else:
@@ -101,10 +101,9 @@ if settings.DEBUG:
 
     @router.get("/refresh/")
     async def manual_refresh_test(request):
+        client = await oauth_client()
         token = await BlackbaudToken.objects.afirst()
-        await oauth.refresh_token(
-            refresh_token=token.refresh_token
-        )
+        await client.refresh_token(refresh_token=token.refresh_token)
         return "Yeah i hope this worked"
 
     @router.get("/clear/")

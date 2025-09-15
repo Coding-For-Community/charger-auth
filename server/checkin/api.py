@@ -1,19 +1,36 @@
 import asyncio
+from io import BytesIO
+
+import torch
+import torch.nn.functional as F
 import ninja
 
+from PIL import Image
 from base64 import b64decode
 from datetime import time, datetime
 from ninja.errors import HttpError
 from ninja.throttling import AnonRateThrottle
-
-from checkin.core.api_methods import get_curr_free_block, is_resetting, free_blocks_today, daily_reset
+from checkin.core.api_methods import get_curr_free_block, is_resetting, free_blocks_today, daily_reset, \
+    fetch_student_img
 from checkin.core.checkin_token import prev_token, curr_token, update_checkin_token
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import Student
-from checkin.schema import CheckInSchema
+from checkin.schema import CheckInSchema, FaceVerifySchema
 from config import settings
+from facenet_pytorch import MTCNN, InceptionResnetV1
+from oauth.api import oauth_client
 
+SIZE = (256, 256)
+mtcnn = MTCNN(image_size=SIZE[0], margin=1)
+resnet = InceptionResnetV1(pretrained='vggface2').eval()
 router = ninja.Router()
+
+def get_student(email_b64: str):
+    return Student.objects.filter(email=b64decode(email_b64).decode('utf-8')).afirst()
+
+def img_tensor(data: bytes) -> torch.Tensor | None:
+    img = Image.open(BytesIO(data))
+    return mtcnn(img.convert("RGB").resize(SIZE))
 
 @router.get("/token/")
 async def checkin_token(request):
@@ -103,17 +120,38 @@ async def check_in_user(request, data: CheckInSchema):
     free_block = get_curr_free_block()
     if not free_block:
         raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
-    student = await Student.objects.filter(email=b64decode(data.email_b64)).afirst()
+    student = await get_student(data.email_b64)
     if not student:
         raise HttpError(400, "Invalid Student")
     student.checked_in_blocks += free_block
     await student.asave()
     return { "success": True }
 
+@router.post("/verifyFace/")
+async def verify_face(request, data: FaceVerifySchema):
+    with torch.no_grad():
+        email = b64decode(data.email_b64).decode('utf-8')
+        comparator_task = asyncio.create_task(fetch_student_img(email))
+        posted_img = img_tensor(b64decode(data.face_image_b64))
+        true_img_url = await comparator_task
+        if true_img_url is None or posted_img is None:
+            return { "similarity": -1 }
+        client = await oauth_client()
+        true_img = img_tensor((await client.get(true_img_url)).read())
+        if not true_img:
+            return { "similarity": -1 }
+        embeddings = torch.cat((posted_img.unsqueeze(0), true_img.unsqueeze(0)))
+        embeddings = resnet(embeddings)
+        return {
+            "similarity": F.cosine_similarity(embeddings[0], embeddings[1]).item(),
+        }
+
 if settings.DEBUG:
     @router.delete("/clear/")
     async def reset_data_debug(request):
         await Student.objects.all().adelete()
 
-def get_student(email_b64: str):
-    return Student.objects.filter(email=b64decode(email_b64)).afirst()
+    @router.get("/testGetImg/{email}")
+    async def test_get_img(request, email: str):
+        img_url = await fetch_student_img(email)
+        return {"img_url": img_url}

@@ -7,33 +7,10 @@ import { IconSettings2 } from "../components/icons.tsx";
 import { EMAIL_KEY } from "../utils/constants";
 import { enablePushNotifs } from "../utils/enablePushNotifs";
 import { fetchBackend } from "../utils/fetchBackend";
-import { AuthenticatedTemplate, UnauthenticatedTemplate, useMsalAuthentication } from "@azure/msal-react";
-import { InteractionType } from "@azure/msal-browser";
 
 export const Route = createFileRoute('/MobileAppHome')({
   component: MobileAppHome,
 })
-
-
-function MobileApp() {
-  const {login, result, error} = useMsalAuthentication(InteractionType.Popup);
-  result?.account?.username
-  return (
-    <>
-      <AuthenticatedTemplate>
-        <MobileAppHome />
-      </AuthenticatedTemplate>
-      <UnauthenticatedTemplate>
-        
-      </UnauthenticatedTemplate>
-    </>
-  )
-}
-
-
-function RetryScreen() {
-
-}
 
 function MobileAppHome() {
   const navigate = useNavigate()

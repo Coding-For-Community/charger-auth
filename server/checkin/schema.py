@@ -13,5 +13,9 @@ class CustomFreeBlockSchema(Schema):
     hour: int
     minute: int
 
+class FaceVerifySchema(Schema):
+    face_image_b64: str
+    email_b64: str
+
 
 
