@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScannerAppRouteImport } from './routes/ScannerApp'
 import { Route as MobileAppSignInRouteImport } from './routes/MobileAppSignIn'
-import { Route as MobileAppHomeRouteImport } from './routes/MobileAppHome'
+import { Route as MobileAppRouteImport } from './routes/MobileApp'
 import { Route as AdminLoginRouteImport } from './routes/AdminLogin'
 import { Route as AdminRouteImport } from './routes/Admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -26,9 +26,9 @@ const MobileAppSignInRoute = MobileAppSignInRouteImport.update({
   path: '/MobileAppSignIn',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MobileAppHomeRoute = MobileAppHomeRouteImport.update({
-  id: '/MobileAppHome',
-  path: '/MobileAppHome',
+const MobileAppRoute = MobileAppRouteImport.update({
+  id: '/MobileApp',
+  path: '/MobileApp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
@@ -51,7 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
-  '/MobileAppHome': typeof MobileAppHomeRoute
+  '/MobileApp': typeof MobileAppRoute
   '/MobileAppSignIn': typeof MobileAppSignInRoute
   '/ScannerApp': typeof ScannerAppRoute
 }
@@ -59,7 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
-  '/MobileAppHome': typeof MobileAppHomeRoute
+  '/MobileApp': typeof MobileAppRoute
   '/MobileAppSignIn': typeof MobileAppSignInRoute
   '/ScannerApp': typeof ScannerAppRoute
 }
@@ -68,7 +68,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
-  '/MobileAppHome': typeof MobileAppHomeRoute
+  '/MobileApp': typeof MobileAppRoute
   '/MobileAppSignIn': typeof MobileAppSignInRoute
   '/ScannerApp': typeof ScannerAppRoute
 }
@@ -78,7 +78,7 @@ export interface FileRouteTypes {
     | '/'
     | '/Admin'
     | '/AdminLogin'
-    | '/MobileAppHome'
+    | '/MobileApp'
     | '/MobileAppSignIn'
     | '/ScannerApp'
   fileRoutesByTo: FileRoutesByTo
@@ -86,7 +86,7 @@ export interface FileRouteTypes {
     | '/'
     | '/Admin'
     | '/AdminLogin'
-    | '/MobileAppHome'
+    | '/MobileApp'
     | '/MobileAppSignIn'
     | '/ScannerApp'
   id:
@@ -94,7 +94,7 @@ export interface FileRouteTypes {
     | '/'
     | '/Admin'
     | '/AdminLogin'
-    | '/MobileAppHome'
+    | '/MobileApp'
     | '/MobileAppSignIn'
     | '/ScannerApp'
   fileRoutesById: FileRoutesById
@@ -103,7 +103,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AdminLoginRoute: typeof AdminLoginRoute
-  MobileAppHomeRoute: typeof MobileAppHomeRoute
+  MobileAppRoute: typeof MobileAppRoute
   MobileAppSignInRoute: typeof MobileAppSignInRoute
   ScannerAppRoute: typeof ScannerAppRoute
 }
@@ -124,11 +124,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MobileAppSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/MobileAppHome': {
-      id: '/MobileAppHome'
-      path: '/MobileAppHome'
-      fullPath: '/MobileAppHome'
-      preLoaderRoute: typeof MobileAppHomeRouteImport
+    '/MobileApp': {
+      id: '/MobileApp'
+      path: '/MobileApp'
+      fullPath: '/MobileApp'
+      preLoaderRoute: typeof MobileAppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/AdminLogin': {
@@ -159,7 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AdminLoginRoute: AdminLoginRoute,
-  MobileAppHomeRoute: MobileAppHomeRoute,
+  MobileAppRoute: MobileAppRoute,
   MobileAppSignInRoute: MobileAppSignInRoute,
   ScannerAppRoute: ScannerAppRoute,
 }

@@ -1,91 +1,56 @@
+"""
+Stores an oauth-supporting httpx client that allows for access to the blackbaud API.
+Tokens are cached in the database and fetched upon startup.
+To generate a new token, run `py manage.py bboauth` in the terminal AFTER the server
+is started with `py main.py` on a different terminal.
+"""
 import os
 import ninja
 
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from django.contrib.auth import aauthenticate, alogin
-from django.http import HttpRequest, JsonResponse
-from django.shortcuts import redirect
 from dotenv import load_dotenv
-
-from checkin.core.api_methods import daily_reset
 from config import settings
 from oauth.models import BlackbaudToken
-from oauth.schema import ScannerAppLoginSchema
 
 load_dotenv()
 os.environ['AUTHLIB_INSECURE_TRANSPORT'] = "1" if settings.DEBUG else "0"
 
+async def oauth_client(fetch_token=True):
+    """
+    Fetches the oauth client, used for get requests to the blackbaud api.
+    """
+    if fetch_token and oauth.token is None:
+        token = await BlackbaudToken.objects.afirst()
+        oauth.token = token.to_dict() if token else None
+        print("Blackbaud token was just initialized.")
+    return oauth
+
 # noinspection PyUnusedLocal
-async def update_token(token, refresh_token=None, access_token=None):
-    item = await BlackbaudToken.objects.afirst()
-    item.access_token = token['access_token']
-    item.refresh_token = token['refresh_token']
-    item.expires_at = token['expires_at']
-    await item.asave()
+async def __update_token_impl(token, refresh_token=None, access_token=None):
+    await BlackbaudToken.reset_from_dict(token)
 
 oauth = AsyncOAuth2Client(
     client_id=os.environ["OAUTH_CLIENT_ID"],
     client_secret=os.environ["OAUTH_CLIENT_SECRET"],
-    update_token=update_token,
+    update_token=__update_token_impl,
     token_endpoint="https://oauth2.sky.blackbaud.com/token",
     base_url="https://api.sky.blackbaud.com/school/v1/",
     headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
 )
 
-async def oauth_client():
-    """
-    Fetches the oauth client, used for get requests to the blackbaud api.
-    """
-    if oauth.token is None:
-        token = await BlackbaudToken.objects.afirst()
-        oauth.token = token.to_token() if token else None
-        print("Blackbaud token was just initialized.")
-    return oauth
-
 router = ninja.Router()
-
-@router.get("/")
-async def login(request):
-    client = await oauth_client()
-    auth_url, _ = client.create_authorization_url(
-        "https://oauth2.sky.blackbaud.com/authorization",
-        redirect_uri=request.build_absolute_uri("/oauth/authorize/")
-    )
-    # http://127.0.0.1:8000/oauth/
-    return redirect(auth_url)
 
 @router.get("/authorize/")
 async def authorize(request):
-    client = await oauth_client()
+    client = await oauth_client(fetch_token=False)
     token = await client.fetch_token(
         authorization_response=request.build_absolute_uri(),
         redirect_uri=request.build_absolute_uri("/oauth/authorize/")
     )
-    await BlackbaudToken.objects.all().adelete()
-    await BlackbaudToken.objects.acreate(
-        token_type=token["token_type"],
-        access_token=token["access_token"],
-        refresh_token=token["refresh_token"],
-        expires_at=token["expires_at"]
-    )
-    await daily_reset(False) # redo daily reset after the token is reinitialised
+    await BlackbaudToken.reset_from_dict(token)
     return {
         "token": token
     }
-
-@router.post("/scannerAppLogin/")
-async def scanner_app_login(request: HttpRequest, data: ScannerAppLoginSchema):
-    user = await request.auser()
-    if user.is_authenticated:
-        return { "success": True }
-    elif not data.verify:
-        return { "success": False }
-    else:
-        res = await aauthenticate(request, username="ScannerAppUser", password=data.password)
-        if res is None or not res.is_superuser:
-            return { "success": False }
-        await alogin(request, user=res)
-        return { "success": res.is_superuser }
 
 if settings.DEBUG:
     @router.get("/test/{path:api_route}")

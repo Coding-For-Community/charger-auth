@@ -4,17 +4,12 @@ import { useMutation } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { IconReload } from '../components/icons.tsx';
+import { useAdminLoginRedirect } from '../utils/adminPerms.ts';
 import { fetchBackend } from '../utils/fetchBackend';
-import { useAdminLoggedInCheck } from '../utils/tryAdminLogin';
 
 export const Route = createFileRoute('/Admin')({
   component: Admin,
 })
-
-interface Student {
-  id: number
-  name: string
-}
 
 type CheckInMode = "Not checked in" | "Checked in"
 
@@ -23,23 +18,22 @@ function Admin() {
   const [mode, setMode] = useState<CheckInMode>("Not checked in")
   const [block, setBlock] = useState("A");
   const [searchQ, setSearchQ] = useState("");
-  const [absentStudents, setAbsentStudents] = useState([] as Student[])
-  const absentStudentsM = useMutation({
+  const [absentStudents, setAbsentStudents] = useState([] as string[])
+  const studentsM = useMutation({
     mutationFn: async () => {
       let endpoint = "/checkin/"
       endpoint += mode === "Checked in" ? "checkedInStudents/" : "notCheckedInStudents/"
       endpoint += block
       const res = await fetchBackend(endpoint)
-      const students = (await res.json())["students"] as Student[]
+      const students = (await res.json())["students"] as string[]
       setAbsentStudents(students)
     }
   })
-  const loggedIn = useAdminLoggedInCheck()
+  const loggedIn = useAdminLoginRedirect()
 
-  function isSearched(student: Student) {
+  function isSearched(student: string) {
     return searchQ === "" || 
-      student.name.toLowerCase().startsWith(searchQ.toLowerCase()) || 
-      student.id.toString() === searchQ
+      student.toLowerCase().startsWith(searchQ.toLowerCase())
   }
 
   if (loggedIn.isFetching) {
@@ -77,7 +71,7 @@ function Admin() {
             onChange={(m) => {
               if (m == null) return
               setMode(m as CheckInMode)
-              absentStudentsM.mutate()
+              studentsM.mutate()
             }}
           />
           <Title order={4}> students for </Title>
@@ -87,7 +81,7 @@ function Admin() {
             onChange={block => {
               if (block == null) return
               setBlock(block)
-              absentStudentsM.mutate()
+              studentsM.mutate()
             }}
             size="sm"
             maw={rem(80)}
@@ -103,13 +97,13 @@ function Admin() {
             w={rem(200)}
           />
           {
-            absentStudentsM.isPending
+            studentsM.isPending
               ? <Loader size={30} />
               : <ActionIcon 
                   variant="outline" 
                   color="rgb(0, 0, 0)" 
                   radius="lg"
-                  onClick={() => absentStudentsM.mutate()}
+                  onClick={() => studentsM.mutate()}
                 >
                   <IconReload size="20" />
                 </ActionIcon>
@@ -120,7 +114,7 @@ function Admin() {
           {
             absentStudents
               .filter(isSearched)
-              .map(student => <StudentListing name={student.name} />)
+              .map(student => <StudentListing name={student} />)
           }
         </ScrollArea>
       </AppShell.Main>

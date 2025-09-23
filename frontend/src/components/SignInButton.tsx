@@ -1,7 +1,6 @@
 import React from 'react';
 import classes from './SignInButton.module.css'; // Import the CSS file for styling
 
-// Define the type for the component's props
 interface SignInButtonProps {
   buttonStyle?: React.CSSProperties
   textStyle?: React.CSSProperties

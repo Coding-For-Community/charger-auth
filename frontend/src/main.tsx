@@ -6,8 +6,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { routeTree } from './routeTree.gen'
 import { createHashHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-import { MsalProvider } from '@azure/msal-react';
-import { PublicClientApplication } from "@azure/msal-browser";
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {
@@ -21,18 +19,12 @@ navigator.serviceWorker?.register("../charger-auth/serviceWorker.js");
 
 const qClient = new QueryClient();
 const router = createRouter({ routeTree, history: createHashHistory() })
-const pca = new PublicClientApplication({
-  auth: { clientId: "TODO" },
-  
-})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider>
       <QueryClientProvider client={qClient}>
-        <MsalProvider instance={pca}>
-          <RouterProvider router={router} />
-        </MsalProvider>
+        <RouterProvider router={router} />
       </QueryClientProvider>
     </MantineProvider>
   </StrictMode>

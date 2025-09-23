@@ -4,6 +4,7 @@ export function fetchBackend(url: string, init?: RequestInit) {
   return fetch(BACKEND_URL + url, {
     ...(init ?? {}),
     headers: {
+      ...(init?.headers ?? {}),
       'ngrok-skip-browser-warning': "1",
       "Content-Type": "application/json"
     }
