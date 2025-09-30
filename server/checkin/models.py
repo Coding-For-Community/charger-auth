@@ -40,3 +40,6 @@ class FreeBlockToday(models.Model):
     )
     time = models.TimeField()
 
+class BackgroundExecutorRequests(models.Model):
+    desire_manual_reset = models.BooleanField(default=False)
+

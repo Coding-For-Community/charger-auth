@@ -1,11 +1,11 @@
 import { Paper, rem, Text, TextInput, Title } from '@mantine/core';
 import { useMutation } from "@tanstack/react-query";
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { useRouter, createLazyFileRoute } from '@tanstack/react-router';
 import { useState } from "react";
 import { SignInButton } from '../components/SignInButton';
 import { fetchBackend } from '../utils/fetchBackend';
 
-export const Route = createFileRoute('/AdminLogin')({
+export const Route = createLazyFileRoute('/AdminLogin')({
   component: AdminLogin,
 })
 

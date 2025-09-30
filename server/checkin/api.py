@@ -97,7 +97,9 @@ async def student_exists(request, email_b64: str):
 async def perms(request: HttpRequest):
     user = await request.auser()
     if not (user.is_authenticated and user.is_superuser):
+        print("NO PERMS!")
         return { "isAdmin": False }
+    print("YES PERMS!")
     return {
         "isAdmin": True,
         "manualCheckIn": user.username == "ManualEnabledScannerAppUser"
@@ -126,9 +128,10 @@ async def check_in_student(request: HttpRequest, data: CheckInSchema):
             await checkin_record.asave()
     else:
         await CheckInRecord(device_id=data.device_id).asave()
-    student.checked_in_blocks += free_block
-    await student.asave()
-    return { "success": True }
+    if free_block not in student.checked_in_blocks:
+        student.checked_in_blocks += free_block
+        await student.asave()
+    return { "studentName": student.name }
 
 @router.post("/runManual/")
 async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchema):
@@ -147,7 +150,7 @@ async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchem
         raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
     student.checked_in_blocks += free_block
     await student.asave()
-    return { "success": True }
+    return { "studentName": student.name }
 
 @router.post("/adminLogin/")
 async def admin_login(request: HttpRequest, data: AdminLoginSchema):

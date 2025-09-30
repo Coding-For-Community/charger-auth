@@ -5,7 +5,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { IconReload } from '../components/icons.tsx';
 import { useAdminLoginRedirect } from '../utils/adminPerms.ts';
-import { fetchBackend } from '../utils/fetchBackend';
+import { fetchBackend } from '../utils/fetchBackend.ts';
 
 export const Route = createFileRoute('/Admin')({
   component: Admin,

@@ -8,17 +8,36 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ScannerAppRouteImport } from './routes/ScannerApp'
+import { Route as PwaOnlyErrorRouteImport } from './routes/PwaOnlyError'
 import { Route as MobileAppSignInRouteImport } from './routes/MobileAppSignIn'
 import { Route as MobileAppRouteImport } from './routes/MobileApp'
-import { Route as AdminLoginRouteImport } from './routes/AdminLogin'
-import { Route as AdminRouteImport } from './routes/Admin'
 import { Route as IndexRouteImport } from './routes/index'
 
-const ScannerAppRoute = ScannerAppRouteImport.update({
+const ScannerAppLazyRouteImport = createFileRoute('/ScannerApp')()
+const AdminLoginLazyRouteImport = createFileRoute('/AdminLogin')()
+const AdminLazyRouteImport = createFileRoute('/Admin')()
+
+const ScannerAppLazyRoute = ScannerAppLazyRouteImport.update({
   id: '/ScannerApp',
   path: '/ScannerApp',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/ScannerApp').then((d) => d.Route))
+const AdminLoginLazyRoute = AdminLoginLazyRouteImport.update({
+  id: '/AdminLogin',
+  path: '/AdminLogin',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/AdminLogin').then((d) => d.Route))
+const AdminLazyRoute = AdminLazyRouteImport.update({
+  id: '/Admin',
+  path: '/Admin',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/Admin').then((d) => d.Route))
+const PwaOnlyErrorRoute = PwaOnlyErrorRouteImport.update({
+  id: '/PwaOnlyError',
+  path: '/PwaOnlyError',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MobileAppSignInRoute = MobileAppSignInRouteImport.update({
@@ -31,16 +50,6 @@ const MobileAppRoute = MobileAppRouteImport.update({
   path: '/MobileApp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: '/AdminLogin',
-  path: '/AdminLogin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/Admin',
-  path: '/Admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,63 +58,70 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/Admin': typeof AdminRoute
-  '/AdminLogin': typeof AdminLoginRoute
   '/MobileApp': typeof MobileAppRoute
   '/MobileAppSignIn': typeof MobileAppSignInRoute
-  '/ScannerApp': typeof ScannerAppRoute
+  '/PwaOnlyError': typeof PwaOnlyErrorRoute
+  '/Admin': typeof AdminLazyRoute
+  '/AdminLogin': typeof AdminLoginLazyRoute
+  '/ScannerApp': typeof ScannerAppLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/Admin': typeof AdminRoute
-  '/AdminLogin': typeof AdminLoginRoute
   '/MobileApp': typeof MobileAppRoute
   '/MobileAppSignIn': typeof MobileAppSignInRoute
-  '/ScannerApp': typeof ScannerAppRoute
+  '/PwaOnlyError': typeof PwaOnlyErrorRoute
+  '/Admin': typeof AdminLazyRoute
+  '/AdminLogin': typeof AdminLoginLazyRoute
+  '/ScannerApp': typeof ScannerAppLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/Admin': typeof AdminRoute
-  '/AdminLogin': typeof AdminLoginRoute
   '/MobileApp': typeof MobileAppRoute
   '/MobileAppSignIn': typeof MobileAppSignInRoute
-  '/ScannerApp': typeof ScannerAppRoute
+  '/PwaOnlyError': typeof PwaOnlyErrorRoute
+  '/Admin': typeof AdminLazyRoute
+  '/AdminLogin': typeof AdminLoginLazyRoute
+  '/ScannerApp': typeof ScannerAppLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/Admin'
-    | '/AdminLogin'
     | '/MobileApp'
     | '/MobileAppSignIn'
+    | '/PwaOnlyError'
+    | '/Admin'
+    | '/AdminLogin'
     | '/ScannerApp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/Admin'
-    | '/AdminLogin'
     | '/MobileApp'
     | '/MobileAppSignIn'
+    | '/PwaOnlyError'
+    | '/Admin'
+    | '/AdminLogin'
     | '/ScannerApp'
   id:
     | '__root__'
     | '/'
-    | '/Admin'
-    | '/AdminLogin'
     | '/MobileApp'
     | '/MobileAppSignIn'
+    | '/PwaOnlyError'
+    | '/Admin'
+    | '/AdminLogin'
     | '/ScannerApp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
-  AdminLoginRoute: typeof AdminLoginRoute
   MobileAppRoute: typeof MobileAppRoute
   MobileAppSignInRoute: typeof MobileAppSignInRoute
-  ScannerAppRoute: typeof ScannerAppRoute
+  PwaOnlyErrorRoute: typeof PwaOnlyErrorRoute
+  AdminLazyRoute: typeof AdminLazyRoute
+  AdminLoginLazyRoute: typeof AdminLoginLazyRoute
+  ScannerAppLazyRoute: typeof ScannerAppLazyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -114,7 +130,28 @@ declare module '@tanstack/react-router' {
       id: '/ScannerApp'
       path: '/ScannerApp'
       fullPath: '/ScannerApp'
-      preLoaderRoute: typeof ScannerAppRouteImport
+      preLoaderRoute: typeof ScannerAppLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/AdminLogin': {
+      id: '/AdminLogin'
+      path: '/AdminLogin'
+      fullPath: '/AdminLogin'
+      preLoaderRoute: typeof AdminLoginLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Admin': {
+      id: '/Admin'
+      path: '/Admin'
+      fullPath: '/Admin'
+      preLoaderRoute: typeof AdminLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/PwaOnlyError': {
+      id: '/PwaOnlyError'
+      path: '/PwaOnlyError'
+      fullPath: '/PwaOnlyError'
+      preLoaderRoute: typeof PwaOnlyErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/MobileAppSignIn': {
@@ -131,20 +168,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MobileAppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/AdminLogin': {
-      id: '/AdminLogin'
-      path: '/AdminLogin'
-      fullPath: '/AdminLogin'
-      preLoaderRoute: typeof AdminLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/Admin': {
-      id: '/Admin'
-      path: '/Admin'
-      fullPath: '/Admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -157,11 +180,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
-  AdminLoginRoute: AdminLoginRoute,
   MobileAppRoute: MobileAppRoute,
   MobileAppSignInRoute: MobileAppSignInRoute,
-  ScannerAppRoute: ScannerAppRoute,
+  PwaOnlyErrorRoute: PwaOnlyErrorRoute,
+  AdminLazyRoute: AdminLazyRoute,
+  AdminLoginLazyRoute: AdminLoginLazyRoute,
+  ScannerAppLazyRoute: ScannerAppLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

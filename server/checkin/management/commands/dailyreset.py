@@ -6,18 +6,19 @@ from django.core.management import BaseCommand
 from pywebpush import webpush, WebPushException
 from checkin.core.get_now import get_now
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
-from checkin.models import Student, FreeBlockToday
+from checkin.models import Student, FreeBlockToday, CheckInRecord, BackgroundExecutorRequests
 from datetime import datetime, time
 from dotenv import load_dotenv
 from notifs.models import SubscriptionData
 
 class Command(BaseCommand):
-    help = 'When run, periodically resets the database data at a certain time(7:00 by default) every day.'
+    help = 'When run, periodically resets the database data at a certain time(7:00 by default) every day'
 
     def __init__(self):
         super().__init__()
         load_dotenv()
         self.free_blocks_today: dict[FreeBlock, time] = {}
+        self.reset_count = 0
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -42,7 +43,15 @@ class Command(BaseCommand):
         )
         while True:
             schedule.run_pending()
-            await asyncio.sleep(1)
+            _, bg_reqs = await asyncio.gather(
+                asyncio.sleep(1),
+                BackgroundExecutorRequests.objects.afirst()
+            )
+            if bg_reqs and bg_reqs.desire_manual_reset and self.reset_count < 3:
+                await self.daily_reset(False)
+                bg_reqs.desire_manual_reset = False
+                await bg_reqs.asave()
+                self.reset_count += 1
 
     async def daily_reset(self, remove_checked_in_blocks: bool):
         """
@@ -98,6 +107,8 @@ class Command(BaseCommand):
             tasks.extend(self._save_student(user, maybe_free_block) for user in course["roster"])
         await asyncio.gather(*tasks)
         print(f"Num free block courses: {num_free_block_courses}")
+
+        await CheckInRecord.objects.all().adelete()
 
     async def _save_student(self, user: dict, maybe_free_block: FreeBlock | None = None):
         if user["leader"].get("type") == "Teacher":

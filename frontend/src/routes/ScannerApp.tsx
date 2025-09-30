@@ -1,24 +1,24 @@
-import { Card, Center, Group, Loader, Stack, Text } from '@mantine/core'
+import { Button, Card, Center, Group, Loader, Stack, Text, Title } from '@mantine/core'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import QrScanner from 'qr-scanner'
 import { useEffect, useRef, useState } from 'react'
 import { IconCheck } from '../components/icons.tsx'
+import { SignInModal } from '../components/SignInModal.tsx'
 import { useAdminLoginRedirect } from '../utils/adminPerms.ts'
 import { delay } from '../utils/delay.ts'
-import { fetchBackend } from '../utils/fetchBackend'
-import { ManualLoginModal } from '../components/ManualLogInModal.tsx'
+import { fetchBackend } from '../utils/fetchBackend.ts'
 
 export const Route = createFileRoute('/ScannerApp')({
   component: ScannerApp,
+  
 })
 
-const dingSound = new Audio("ding.mp3")
 const ohNoSound = new Audio("error.mp3")
 
 interface ScanResult {
   status: "ok" | "err" | "skipped"
-  msg?: string
+  msg?: string,
+  studentName?: string
 }
 
 function ScannerApp() {
@@ -26,7 +26,8 @@ function ScannerApp() {
   const vidRef = useRef<HTMLVideoElement | null>(null)
   const cooldownOn = useRef(false)
   const prevEmail = useRef("")
-  const [checkShown, setCheckShown] = useState(false)
+  const [signedInName, setSignedInName] = useState<string | null>(null)
+  const [border, setBorder] = useState(false)
 
   function onError(err: string) {
     window.alert(err) 
@@ -62,7 +63,7 @@ function ScannerApp() {
 
       switch (res.status) {
         case 200:
-          return { status: "ok" }
+          return { status: "ok", studentName: (await res.json())["studentName"] }
         case 400:
           return { status: "err", msg: "Invalid Student ID - maybe close and re-open ChargerAuth?" }
         case 401:
@@ -84,62 +85,36 @@ function ScannerApp() {
         await delay(200)
         onError(result.msg ?? "Invalid Error")
       } else if (result.status === "ok") {
-        dingSound.play()
-        await delay(200)
-        setCheckShown(true)
-        delay(500).then(() => setCheckShown(false))
+        setSignedInName(result.studentName ?? "ERROR: No student name")
       }
     },
   })
 
   useEffect(() => {
-    if (vidRef.current == null) return
-    const scanner = new QrScanner(
-      vidRef.current, (res) => checkinM.mutate(res.data),
-      { 
-        highlightScanRegion: true,
-        calculateScanRegion(video) {
-          // Expand the scan region to 95% of the video's width and height
-          const size = Math.min(video.videoWidth, video.videoHeight);
-          const x = (video.videoWidth - size * 0.95) / 2;
-          const y = (video.videoHeight - size * 0.95) / 2;
-          const width = size * 0.95;
-          const height = size * 0.95;
-          return { x, y, width, height };
-        }
-      }
-    )
-    scanner.start()
-  }, [vidRef.current])
-
-  // Loader overlay style
-  const loaderOverlayStyle = {
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    background: "rgba(255,255,255,0.7)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    borderRadius: 16,
-  };
-
-  // Animated check icon style
-  const indicatorStyle = {
-    position: "absolute" as const,
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%) scale(1)",
-    zIndex: 3,
-    transition: "transform 0.2s",
-    boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-    background: "white",
-    borderRadius: "50%",
-    padding: 12,
-  };
+    console.log("hiya!")
+    import('qr-scanner')
+      .then(module => module.default)
+      .then(QrScanner => {
+        if (vidRef.current == null || freeBlockQ.isFetching) return
+        const scanner = new QrScanner(
+          vidRef.current, (res) => checkinM.mutate(res.data),
+          { 
+            preferredCamera: "user",
+            highlightScanRegion: true,
+            calculateScanRegion(video) {
+              // Expand the scan region to 95% of the video's width and height
+              const size = Math.min(video.videoWidth, video.videoHeight);
+              const x = (video.videoWidth - size * 0.95) / 2;
+              const y = (video.videoHeight - size * 0.95) / 2;
+              const width = size * 0.95;
+              const height = size * 0.95;
+              return { x, y, width, height };
+            }
+          }
+        )
+        scanner.start()
+      })
+  }, [vidRef.current, freeBlockQ.isFetching])
 
   if (freeBlockQ.isFetching) {
     return (
@@ -151,11 +126,15 @@ function ScannerApp() {
   }
 
   return (
-    <>
-      <ManualLoginModal perms={perms.data} />
+    <div style={{ border: `8px solid ${border ? `green` : `white`}`, height: `100vh` }}>
+      <SignInModal 
+        perms={perms.data} 
+        signedInName={signedInName} 
+        setSignedInName={setSignedInName} 
+      />
       <Stack align="center" gap={0}>
-        <Text fz={30} fw="bold" mb={8} gradient={{ from: 'blue', to: 'cyan', deg: 90 }}>
-          ChargerAuth Check-In {freeBlockQ.data ? `(${freeBlockQ.data} Block)` : "" }
+        <Text fz={30} fw="bold" mb={8} gradient={{ from: "blue", to: "cyan", deg: 90 }}>
+          ChargerAuth Check-In {freeBlockQ.data ? `(${freeBlockQ.data} Block)` : `` }
         </Text>
         <Text size="md" c="dimmed" ta="center" mb={20}>
           {freeBlockQ.data
@@ -166,7 +145,7 @@ function ScannerApp() {
           shadow="md"
           padding={0}
           mb={24}
-          mx={30}
+          mx={80}
           bdrs={16}
           bg="#f8fafc"
           style={{
@@ -186,23 +165,21 @@ function ScannerApp() {
             }}
             muted
           />
-          {/* Loader overlay if scanning or fetching */}
-          {(freeBlockQ.isFetching) && (
-            <div style={loaderOverlayStyle}>
-              <Loader size="xl" />
-            </div>
-          )}
-          {/* Animated check icon */}
-          {checkShown && (
-            <IconCheck color="green" size={100} style={indicatorStyle} />
-          )}
         </Card>
-        <Group mt={8} gap="xs">
-          <Text size="sm" c="dimmed">
-            Make sure your QR code is clearly visible in the camera.
-          </Text>
+        <Button onClick={() => setBorder(!border)}>Test shenanigans</Button>
+        <Group gap={10}>
+          <IconCheck 
+            color="white" 
+            size={50} 
+            style={{
+              boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+              background: "green",
+              borderRadius: "50%"
+            }} 
+          />
+          <Title order={1}>Daniel Chen has signed in.</Title>
         </Group>
       </Stack>
-    </>
+    </div>
   );
 }
