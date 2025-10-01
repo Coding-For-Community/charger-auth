@@ -32,7 +32,9 @@ def get_student(email_b64: str):
     return Student.objects.filter(email=b64decode(email_b64).decode('utf-8')).afirst()
 
 @router.get("/token/")
-async def checkin_token(request):
+async def checkin_token(request: HttpRequest):
+    if not (await perms(request)).get("isAdmin"):
+        raise HttpError(401, "Scanner App not logged in.")
     delta_secs = (datetime.now() - curr_token().timestamp).total_seconds()
     if delta_secs < 0 or delta_secs > 5:
         update_checkin_token()
@@ -106,9 +108,7 @@ async def perms(request: HttpRequest):
     }
 
 @router.post("/run/")
-async def check_in_student(request: HttpRequest, data: CheckInSchema):
-    if not (await perms(request)).get("isAdmin"):
-        raise HttpError(401, "Scanner App not logged in.")
+async def check_in_student(request, data: CheckInSchema):
     if data.checkin_token != str(curr_token().uuid) and data.checkin_token != str(prev_token().uuid):
         raise HttpError(403, "Invalid checkin token.")
     free_block = await get_curr_free_block()
