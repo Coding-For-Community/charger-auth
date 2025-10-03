@@ -3,7 +3,6 @@ from django.db import models
 
 from checkin.core.types import FreeBlock
 
-
 def _free_blocks_field():
     return models.CharField(
         max_length=8,
@@ -16,10 +15,15 @@ class Student(models.Model):
     """
     Represents a cary academy student.
     """
+    email = models.EmailField(max_length=200, primary_key=True)
     free_blocks: str = _free_blocks_field()
     checked_in_blocks: str = _free_blocks_field()
     name = models.CharField(max_length=100, default="[Unknown]")
-    email = models.EmailField(max_length=200, primary_key=True)
+    has_checkin_vids = models.BooleanField(default=False)
+
+class CheckInVideo(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='videos')
+    file = models.FileField(upload_to='checkin_vids/')
 
 class CheckInRecord(models.Model):
     """

@@ -3,4 +3,5 @@ __pycache__
 staticfiles
 dev.sqlite3
 .env
-login/
+media/
+logutil/main.log.1

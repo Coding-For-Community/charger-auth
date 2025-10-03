@@ -18,14 +18,14 @@ def update_checkin_token():
 _prev_token = CheckinToken(uuid=uuid.uuid4(), timestamp=datetime.now())
 _curr_token = _prev_token
 
-def prev_token():
-    """
-    Returns the previous check-in token.
-    """
-    return _prev_token
-
 def curr_token():
     """
     Returns the current check-in token.
     """
     return _curr_token
+
+def token_valid(token: str):
+    """
+    Checks if a token is valid.
+    """
+    return token == str(_curr_token.uuid) or token == str(_prev_token.uuid)

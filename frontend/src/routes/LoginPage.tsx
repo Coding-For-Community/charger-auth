@@ -1,16 +1,16 @@
 import { rem, Stack, Text, TextInput } from "@mantine/core"
+import { useMutation } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState, type FormEvent } from "react"
 import { SignInButton } from "../components/SignInButton"
 import { EMAIL_KEY } from "../utils/constants"
 import { fetchBackend } from "../utils/fetchBackend"
-import { useMutation } from "@tanstack/react-query"
 
-export const Route = createFileRoute('/MobileAppSignIn')({
-  component: MobileAppSignIn,
+export const Route = createFileRoute('/LoginPage')({
+  component: LoginPage,
 })
 
-function MobileAppSignIn() {
+function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
 
@@ -28,13 +28,13 @@ function MobileAppSignIn() {
         return
       }
       window.localStorage.setItem(EMAIL_KEY, email)
-      navigate({ to: "/MobileApp" })
+      navigate({ to: "/HomePage" })
     }
   })
 
   useEffect(() => {
     if (window.localStorage.getItem(EMAIL_KEY)) {
-      navigate({ to: "/MobileApp" })
+      navigate({ to: "/HomePage" })
     }
   }, [])
   

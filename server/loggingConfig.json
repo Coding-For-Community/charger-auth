@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "colored": {
+      "()": "config.logging_util._StdoutFormatter"
+    }
+  },
+  "handlers": {
+    "console": {
+      "level": "INFO",
+      "class": "logging.StreamHandler",
+      "formatter": "colored"
+    }
+  },
+  "loggers": {
+    "": {
+      "handlers": [
+        "console"
+      ],
+      "level": "DEBUG",
+      "propagate": true
+    },
+    "uvicorn.error": {
+      "aliases": ["uvicorn"]
+    },
+    "django": {
+      "level": "INFO"
+    }
+  }
+}

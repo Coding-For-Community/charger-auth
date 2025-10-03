@@ -1,40 +1,33 @@
 """
 Stores the main free period check-in endpoints.
 """
-import asyncio
 import ninja
 
-from base64 import b64decode
 from datetime import datetime
 
 from django.contrib.auth import aauthenticate, alogin
 from django.http import HttpRequest
+from ninja import File, UploadedFile
 from ninja.errors import HttpError
-from checkin.core.checkin_token import prev_token, curr_token, update_checkin_token
-from checkin.core.get_now import get_now
+
+from checkin.core.api_methods import get_curr_free_block, get_student, check_in_auto
+from checkin.core.checkin_token import curr_token, token_valid, update_checkin_token
+from checkin.core.compress_video import compress_video
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
-from checkin.models import Student, CheckInRecord, FreeBlockToday
+from checkin.models import Student, CheckInVideo
 from checkin.schema import CheckInSchema, AdminLoginSchema, ManualCheckInSchema
 from config import settings
 from oauth.api import oauth_client
 
 router = ninja.Router()
 
-async def get_curr_free_block() -> FreeBlock | None:
-    now = get_now()
-    async for item in FreeBlockToday.objects.all():
-        delta_time_secs = (datetime.combine(now.date(), item.time) - now).total_seconds()
-        if -600 <= delta_time_secs <= 600:
-            return item.block
-    return None
-
-def get_student(email_b64: str):
-    return Student.objects.filter(email=b64decode(email_b64).decode('utf-8')).afirst()
-
 @router.get("/token/")
-async def checkin_token(request: HttpRequest):
+async def checkin_token(request: HttpRequest, last_token: str | None = None):
     if not (await perms(request)).get("isAdmin"):
-        raise HttpError(401, "Scanner App not logged in.")
+        if not last_token:
+            raise HttpError(401, "Scanner App not logged in.")
+        elif not token_valid(last_token):
+            raise HttpError(403, "Invalid last_token.")
     delta_secs = (datetime.now() - curr_token().timestamp).total_seconds()
     if delta_secs < 0 or delta_secs > 5:
         update_checkin_token()
@@ -109,28 +102,28 @@ async def perms(request: HttpRequest):
 
 @router.post("/run/")
 async def check_in_student(request, data: CheckInSchema):
-    if data.checkin_token != str(curr_token().uuid) and data.checkin_token != str(prev_token().uuid):
-        raise HttpError(403, "Invalid checkin token.")
-    free_block = await get_curr_free_block()
-    if not free_block:
-        raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
-    student, checkin_record = await asyncio.gather(
-        get_student(data.email_b64),
-        CheckInRecord.objects.filter(device_id=data.device_id).afirst()
-    )
-    if not student:
-        raise HttpError(400, "Invalid Student")
-    if checkin_record:
-        if free_block in checkin_record.free_blocks:
-            raise HttpError(409, "This device has already checked in from another student's account.")
-        else:
-            checkin_record.free_blocks += free_block
-            await checkin_record.asave()
-    else:
-        await CheckInRecord(device_id=data.device_id).asave()
-    if free_block not in student.checked_in_blocks:
-        student.checked_in_blocks += free_block
-        await student.asave()
+    ip_invalid = request.META.get('HTTP_X_FORWARDED_FOR') not in settings.ALLOWED_CHECK_IN_IPS
+    if not token_valid(data.checkin_token) or ip_invalid:
+        raise HttpError(403, "IP/Token invalid - retry with /checkin/runTentative/.")
+    student = await check_in_auto(data.email_b64, data.device_id)
+    return {
+        "studentName": student.name
+    }
+
+@router.post("/runTentative/")
+async def check_in_student_tentative(
+    request,
+    data: CheckInSchema,
+    raw_video: File[UploadedFile]
+):
+    curr_free_block = await get_curr_free_block()
+    student = await check_in_auto(data.email_b64, data.device_id)
+
+    student.has_checkin_vids = True
+    raw_video.name = f"{student.name}-{curr_free_block}.mp4"
+    with compress_video(raw_video) as video_file:
+        CheckInVideo(student=student).file.save(video_file.name, video_file)
+
     return { "studentName": student.name }
 
 @router.post("/runManual/")

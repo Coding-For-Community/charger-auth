@@ -1,11 +1,10 @@
-import { ActionIcon, AppShell, Burger, Checkbox, Divider, Group, Loader, Paper, rem, ScrollArea, Select, TextInput, Title } from '@mantine/core';
-import { useDisclosure, useLocalStorage } from '@mantine/hooks';
+import { ActionIcon, AppShell, Checkbox, Divider, Group, Loader, Paper, rem, ScrollArea, Select, TextInput, Title } from '@mantine/core';
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { IconReload } from '../components/icons.tsx';
-import { useAdminLoginRedirect } from '../utils/adminPerms.ts';
 import { fetchBackend } from '../utils/fetchBackend.ts';
+import { useAdminLoginRedirect } from '../utils/perms.ts';
 
 export const Route = createFileRoute('/Admin')({
   component: Admin,
@@ -14,7 +13,6 @@ export const Route = createFileRoute('/Admin')({
 type CheckInMode = "Not checked in" | "Checked in"
 
 function Admin() {
-  const [opened, { toggle }] = useDisclosure();
   const [mode, setMode] = useState<CheckInMode>("Not checked in")
   const [block, setBlock] = useState("A");
   const [searchQ, setSearchQ] = useState("");
@@ -30,6 +28,22 @@ function Admin() {
     }
   })
   const loggedIn = useAdminLoginRedirect()
+
+  const [checkedItems, setCheckedItems] = useState(() => {
+    const txt = window.localStorage.getItem("checkedItems")
+    return (txt == null ? [] : JSON.parse(txt)) as string[]
+  })
+  const checked = (name: string) => checkedItems.includes(name)
+  const setChecked = (checked: boolean, name: string) => setCheckedItems(prevValue => {
+    let newItems = prevValue
+    if (checked) {
+      if (!newItems.includes(name)) newItems = newItems.concat(name)
+    } else {
+      newItems = newItems.filter(item => item !== name);
+    }
+    window.localStorage.setItem("checkedItems", JSON.stringify(newItems))
+    return newItems
+  })
 
   function isSearched(student: string) {
     return searchQ === "" || 
@@ -48,12 +62,6 @@ function Admin() {
     >
       <AppShell.Header p={rem(15)}>
         <Group gap={rem(10)}>
-          <Burger
-            opened={opened}
-            onClick={toggle}
-            hiddenFrom="sm"
-            size="sm"
-          />
           <Title order={3}>CA Free Block Check-in Admin</Title>
         </Group>
       </AppShell.Header>
@@ -114,7 +122,15 @@ function Admin() {
           {
             absentStudents
               .filter(isSearched)
-              .map(student => <StudentListing name={student} />)
+              .map(
+                student => 
+                  <StudentListing 
+                    name={student} 
+                    key={student} 
+                    checked={checked(student)} 
+                    setChecked={c => setChecked(c, student)} 
+                  />
+              )
           }
         </ScrollArea>
       </AppShell.Main>
@@ -122,35 +138,26 @@ function Admin() {
   );
 }
 
-function StudentListing({ name }: { name: string }) {
-  const [checkedItems, setCheckedItems] = useLocalStorage({
-    key: "checkedItems",
-    defaultValue: [] as string[]
-  })
-  const checked = checkedItems.includes(name)
-  const setChecked = (checked: boolean) => {
-    if (checked) {
-      setCheckedItems(i => i.concat(name))
-    } else {
-      setCheckedItems(i => i.filter(item => item !== name))
-    }
-  }
+function StudentListing(args: { 
+  name: string
+  checked: boolean,
+  setChecked: (checked: boolean) => void
+}) {
   return (
     <Paper 
       shadow="xs" 
       radius={rem(10)} 
       p={rem(10)} 
       bg="rgb(250, 251, 254)"
-      key={name}
       mb={rem(10)}
-      onClick={() => setChecked(!checked)}
+      onClick={() => args.setChecked(!args.checked)}
     >
       <Group justify="space-between">
-        <Title order={5}>{name}</Title>
+        <Title order={5}>{args.name}</Title>
         <Checkbox 
           bg="#fafbfe" 
-          checked={checked}
-          onChange={e => setChecked(e.currentTarget.checked)}
+          checked={args.checked}
+          onChange={e => args.setChecked(e.currentTarget.checked)}
         />
       </Group>
     </Paper>

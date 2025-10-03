@@ -1,6 +1,16 @@
 import { fetchBackend } from "./fetchBackend";
 
-export async function enablePushNotifs(userId: number) {
+export async function disablePushNotifs(emailB64: string) {
+  const res = await fetchBackend("/notifs/unregister/", {
+    method: "POST",
+    body: JSON.stringify({ email_b64: emailB64 })
+  })
+  if (res.status != 200) {
+    console.error("Push notifs WERE NOT DISABLED: " + res.statusText)
+  }
+}
+
+export async function enablePushNotifs(emailB64: string) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.error('Push notifications are not supported.');
     return;
@@ -32,10 +42,7 @@ export async function enablePushNotifs(userId: number) {
     // 5. Send the subscription object to the backend
     await fetchBackend('/notifs/register/', {
       method: "POST",
-      body: JSON.stringify({
-        subscription: subscription,
-        user_id: userId
-      })
+      body: JSON.stringify({ subscription, email_b64: emailB64 })
     });
 
     console.log('Successfully subscribed to push notifications.');
