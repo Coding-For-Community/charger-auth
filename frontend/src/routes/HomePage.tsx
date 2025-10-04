@@ -110,7 +110,12 @@ function HomePage() {
             bg="red"
             onClick={() => {
               removeEmail()
-              navigate({ to: "/LoginPage" })
+              navigate({ 
+                to: "/LoginPage",
+                search: () => ({
+                  redirectUrl: "/HomePage"
+                })
+              })
             }}
           >
             Log Out

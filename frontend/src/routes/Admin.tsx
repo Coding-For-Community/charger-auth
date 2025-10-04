@@ -10,7 +10,7 @@ export const Route = createFileRoute('/Admin')({
   component: Admin,
 })
 
-const VideoPlayer = lazy(() => import("../components/VideoPlayer.tsx"))
+const VideoPlayer = lazy(() => import("../components/EvidencePlayer.tsx"))
 
 function Admin() {
   const loggedIn = useAdminLoginRedirect();
@@ -157,7 +157,10 @@ function Admin() {
 
       <VideoPlayer 
         opened={vidsOpened} 
-        onClose={() => setVidsOpened(false)}
+        onClose={() => {
+          studentsQ.refetch()
+          setVidsOpened(false)
+        }}
         freeBlock={block}
         students={studentsQ.data?.filter(s => s["checked_in"] === "tentative") ?? []} 
       />

@@ -1,29 +1,37 @@
 import { Loader, Stack, Text, Title } from "@mantine/core";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, useEffect, useState } from "react";
 import { attemptCheckIn as checkIn, useCheckinTokenQ, useFingerprintQ, type CheckInResult } from '../api/checkIn.ts';
 import { useB64EmailRedirect } from "../api/perms.ts";
 import { IconAlertTriangle, IconCheck } from "../components/icons.tsx";
 
 export const Route = createFileRoute("/CheckInPage")({
-  component: CheckInPage
+  component: CheckInPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    lastToken: (search.lastToken as string)
+  }),
 })
 
 const SnapEvidence = lazy(() => import(`../components/SnapEvidence.tsx`))
 
 function CheckInPage() {
   const [status, setStatus] = useState<CheckInResult>({ status: "loading" })
+  const [triedVideoCheckIn, setTriedVideoCheckIn] = useState(false)
   const { emailB64 } = useB64EmailRedirect()
-  const tokenQ = useCheckinTokenQ()
+  const { lastToken } = Route.useSearch()
+  const tokenQ = useCheckinTokenQ(lastToken)
   const fingerprintQ = useFingerprintQ()
 
   useEffect(() => {
-    if (tokenQ.data && fingerprintQ.data) {
-      checkIn(emailB64, tokenQ.data["token"], fingerprintQ.data).then(setStatus)
+    if (
+      tokenQ.data && fingerprintQ.data && 
+      tokenQ.data != 0 && status.status !== "ok"
+    ) {
+      checkIn(emailB64, fingerprintQ.data, tokenQ.data["token"]).then(setStatus)
     }
   }, [tokenQ.data, fingerprintQ.data])
 
-  if (tokenQ.data == 0) {
+  if (tokenQ.data == 0 && !triedVideoCheckIn && status.status !== "ok") {
     return (
       <SnapEvidence
         title=""
@@ -31,7 +39,8 @@ function CheckInPage() {
         onSend={async (file) => {
           console.log("Got here?")
           setStatus({ status: "loading" })
-          checkIn(emailB64, tokenQ.data["token"], fingerprintQ.data!, file).then(setStatus)
+          setTriedVideoCheckIn(true)
+          checkIn(emailB64, fingerprintQ.data!, undefined, file).then(setStatus)
         }}
       />
     )
@@ -62,6 +71,9 @@ function CheckInPage() {
           <Text ta="center" c="dimmed" mb="md">
             Welcome{status.studentName ? `, ${status.studentName}` : ""}! You have just checked in for this block.
           </Text>
+          <Link to="/HomePage" style={{ textDecoration: "none" }}>
+            Return to home page
+          </Link>
         </>
       )
       break
@@ -75,6 +87,9 @@ function CheckInPage() {
           <Text ta="center" c="dimmed" mb="md" style={{ whiteSpace: "pre-wrap" }}>
             {status.msg?.trim() ?? "An unknown error occurred. Please try again."}
           </Text>
+          <Link to="/HomePage">
+            Return to home page
+          </Link>
         </>
       )
       break

@@ -2,14 +2,11 @@ import FingerprintJs from '@fingerprintjs/fingerprintjs';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBackend } from "./fetchBackend";
 
-export function useCheckinTokenQ() {
+export function useCheckinTokenQ(previousToken: string) {
   return useQuery({
     queryKey: ["token"],
     queryFn: async () => {
-      const relativePath = window.location.hash
-      const lastToken = relativePath.substring(relativePath.indexOf("token=") + 6)
-      const res = await fetchBackend("/checkin/token?last_token=" + lastToken)
-      console.log("STATUS: " + res.status)
+      const res = await fetchBackend("/checkin/token?last_token=" + previousToken)
       if (res.status == 403) return 0
       return await res.json()
     },
@@ -28,7 +25,8 @@ export function useFingerprintQ() {
       const agent = await FingerprintJs.load()
       const id = await agent.get()
       return id.visitorId
-    }
+    },
+    staleTime: Infinity,
   })
 }
 
@@ -40,8 +38,8 @@ export interface CheckInResult {
 
 export async function attemptCheckIn(
   email_b64: string,
-  checkin_token: string,
   device_id: string,
+  checkin_token?: string,
   vidFile?: File 
 ): Promise<CheckInResult> {
   // since the name of the variable is used as the dict key, you have to use underscore notation

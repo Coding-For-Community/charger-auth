@@ -8,11 +8,15 @@ import { EMAIL_KEY } from "../utils/constants"
 
 export const Route = createFileRoute('/LoginPage')({
   component: LoginPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirectUrl: (search.redirectUrl as string)?.replace("#", "") ?? '/HomePage'
+  }),
 })
 
 function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
+  const { redirectUrl } = Route.useSearch()
 
   const emailM = useMutation({
     mutationFn: async (e: FormEvent) => {
@@ -28,13 +32,13 @@ function LoginPage() {
         return
       }
       window.localStorage.setItem(EMAIL_KEY, email)
-      navigate({ to: "/HomePage" })
+      navigate({ to: redirectUrl })
     }
   })
 
   useEffect(() => {
     if (window.localStorage.getItem(EMAIL_KEY)) {
-      navigate({ to: "/HomePage" })
+      navigate({ to: redirectUrl })
     }
   }, [])
   
@@ -44,7 +48,8 @@ function LoginPage() {
         fontSize: 24,
         fontWeight: 'bold',
         color: '#111827', // Dark text for high contrast
-        textAlign: "center"
+        textAlign: "center",
+        margin: 0
       }}>
         Welcome to ChargerAuth!
       </Text>

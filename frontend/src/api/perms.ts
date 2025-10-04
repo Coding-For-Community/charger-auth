@@ -25,7 +25,12 @@ export function useAdminLoginRedirect() {
       const perms = await adminPerms()
       if (!perms.isAdmin) {
         console.log("attempting navigate")
-        navigate({ to: "/AdminLogin" })
+        navigate({ 
+          to: "/AdminLogin",
+          search: () => ({
+            redirectUrl: window.location.hash
+          }) 
+        })
       }
       return perms
     },
@@ -39,7 +44,12 @@ export function useB64EmailRedirect() {
 
   useEffect(() => {
     if (!emailB64 || emailB64 === '') {
-      navigate({ to: "/LoginPage" })
+      navigate({
+        to: "/LoginPage",
+        search: () => ({
+          redirectUrl: window.location.hash
+        })
+      })
     }
   }, [])
 

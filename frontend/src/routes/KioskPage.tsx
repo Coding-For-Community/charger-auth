@@ -66,7 +66,7 @@ function KioskPage() {
         </Text>
         <QRCodeSVG 
           value={
-            `https://coding-for-community.github.io/charger-auth/#/CheckInPage?last_token=${tokenQ.data["token"]}`
+            `https://coding-for-community.github.io/charger-auth/#/CheckInPage?lastToken=${tokenQ.data["token"]}`
           } 
           size={350}
         />
