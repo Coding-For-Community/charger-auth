@@ -3,6 +3,7 @@ Stores the main free period check-in endpoints.
 """
 import logging
 import ninja
+from asgiref.sync import sync_to_async
 
 from django.contrib.auth import aauthenticate, alogin
 from django.http import HttpRequest, FileResponse
@@ -100,10 +101,8 @@ async def check_in_student(request, data: CheckInSchema):
     # ip_invalid = request.META.get('HTTP_X_FORWARDED_FOR') not in settings.ALLOWED_CHECK_IN_IPS
     if not token_manager.validate(data.checkin_token):
         raise HttpError(403, "IP/Token invalid - retry with /checkin/runTentative/.")
-    student = await check_in_auto(data.email_b64, data.device_id)
-    return {
-        "studentName": student.name
-    }
+    student, _ = await check_in_auto(data.email_b64, data.device_id)
+    return { "studentName": student.name }
 
 @router.post("/runTentative/")
 async def check_in_student_tentative(
@@ -112,13 +111,14 @@ async def check_in_student_tentative(
     raw_video: File[UploadedFile]
 ):
     curr_free_block = await get_curr_free_block()
-    student = await check_in_auto(input_data.email_b64, input_data.device_id)
+    student, just_checked_in = await check_in_auto(input_data.email_b64, input_data.device_id)
 
-    raw_video.name = f"{student.name}-{curr_free_block}.webm"
-    with compress_video(raw_video) as video_file:
-        vid_obj = CheckInVideo(student=student, block=get_curr_free_block())
-        vid_obj.file.save(video_file.name, video_file)
-        await vid_obj.asave()
+    if just_checked_in:
+        raw_video.name = f"{student.name}-{curr_free_block}.webm"
+        with compress_video(raw_video) as video_file:
+            vid_obj = CheckInVideo(student=student, block=curr_free_block)
+            await sync_to_async(vid_obj.file.save)(video_file.name, video_file)
+            await vid_obj.asave()
 
     return { "studentName": student.name }
 

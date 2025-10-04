@@ -23,12 +23,11 @@ def compress_video(video: UploadedFile):
         .input(temp_path)
         .output(
             output_path,
-            vcodec='libx264',  # Use H.264 video codec
             crf=28,  # Constant Rate Factor: 0 (lossless) to 51 (worst quality), 28 is a good balance
             an=None,
             sn=None,
-            c="copy",
-            vf='scale=-2:240'  # Reduce resolution to 240p (maintains aspect ratio)
+            loglevel="error",
+            vf='scale=-2:240',  # Reduce resolution to 240p (maintains aspect ratio)
         )
         .run()
     )
@@ -49,12 +48,10 @@ if __name__ == "__main__":
         .input(r"C:\Users\Daniel_Chen\Downloads\Daniel C-A.webm")
         .output(
             r"C:\Users\Daniel_Chen\WebProjects\charger-auth\server\media\compressed\test.webm",
-            vcodec='libx264',  # Use H.264 video codec
             crf=28,  # Constant Rate Factor: 0 (lossless) to 51 (worst quality), 28 is a good balance
             an=None,
             sn=None,
-            c="copy",
-            vf='scale=-2:240'  # Reduce resolution to 240p (maintains aspect ratio)
+            vf='scale=-2:240',  # Reduce resolution to 240p (maintains aspect ratio)
         )
         .run()
     )

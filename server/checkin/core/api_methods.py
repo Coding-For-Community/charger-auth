@@ -42,7 +42,8 @@ async def check_in_auto(email_b64: str, device_id: str):
             await checkin_record.asave()
     else:
         await CheckInRecord(device_id=device_id).asave()
-    if free_block not in student.checked_in_blocks:
+    checked_in = free_block not in student.checked_in_blocks
+    if checked_in:
         student.checked_in_blocks += free_block
         await student.asave()
-    return student
+    return student, checked_in
