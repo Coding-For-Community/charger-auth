@@ -9,26 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ScannerAppRouteImport } from './routes/ScannerApp'
-import { Route as MobileAppSignInRouteImport } from './routes/MobileAppSignIn'
-import { Route as MobileAppHomeRouteImport } from './routes/MobileAppHome'
+import { Route as LoginPageRouteImport } from './routes/LoginPage'
+import { Route as KioskPageRouteImport } from './routes/KioskPage'
+import { Route as HomePageRouteImport } from './routes/HomePage'
+import { Route as CheckInPageRouteImport } from './routes/CheckInPage'
 import { Route as AdminLoginRouteImport } from './routes/AdminLogin'
 import { Route as AdminRouteImport } from './routes/Admin'
 import { Route as IndexRouteImport } from './routes/index'
 
-const ScannerAppRoute = ScannerAppRouteImport.update({
-  id: '/ScannerApp',
-  path: '/ScannerApp',
+const LoginPageRoute = LoginPageRouteImport.update({
+  id: '/LoginPage',
+  path: '/LoginPage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MobileAppSignInRoute = MobileAppSignInRouteImport.update({
-  id: '/MobileAppSignIn',
-  path: '/MobileAppSignIn',
+const KioskPageRoute = KioskPageRouteImport.update({
+  id: '/KioskPage',
+  path: '/KioskPage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MobileAppHomeRoute = MobileAppHomeRouteImport.update({
-  id: '/MobileAppHome',
-  path: '/MobileAppHome',
+const HomePageRoute = HomePageRouteImport.update({
+  id: '/HomePage',
+  path: '/HomePage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckInPageRoute = CheckInPageRouteImport.update({
+  id: '/CheckInPage',
+  path: '/CheckInPage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
@@ -51,26 +57,29 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
-  '/MobileAppHome': typeof MobileAppHomeRoute
-  '/MobileAppSignIn': typeof MobileAppSignInRoute
-  '/ScannerApp': typeof ScannerAppRoute
+  '/CheckInPage': typeof CheckInPageRoute
+  '/HomePage': typeof HomePageRoute
+  '/KioskPage': typeof KioskPageRoute
+  '/LoginPage': typeof LoginPageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
-  '/MobileAppHome': typeof MobileAppHomeRoute
-  '/MobileAppSignIn': typeof MobileAppSignInRoute
-  '/ScannerApp': typeof ScannerAppRoute
+  '/CheckInPage': typeof CheckInPageRoute
+  '/HomePage': typeof HomePageRoute
+  '/KioskPage': typeof KioskPageRoute
+  '/LoginPage': typeof LoginPageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
-  '/MobileAppHome': typeof MobileAppHomeRoute
-  '/MobileAppSignIn': typeof MobileAppSignInRoute
-  '/ScannerApp': typeof ScannerAppRoute
+  '/CheckInPage': typeof CheckInPageRoute
+  '/HomePage': typeof HomePageRoute
+  '/KioskPage': typeof KioskPageRoute
+  '/LoginPage': typeof LoginPageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -78,57 +87,68 @@ export interface FileRouteTypes {
     | '/'
     | '/Admin'
     | '/AdminLogin'
-    | '/MobileAppHome'
-    | '/MobileAppSignIn'
-    | '/ScannerApp'
+    | '/CheckInPage'
+    | '/HomePage'
+    | '/KioskPage'
+    | '/LoginPage'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/Admin'
     | '/AdminLogin'
-    | '/MobileAppHome'
-    | '/MobileAppSignIn'
-    | '/ScannerApp'
+    | '/CheckInPage'
+    | '/HomePage'
+    | '/KioskPage'
+    | '/LoginPage'
   id:
     | '__root__'
     | '/'
     | '/Admin'
     | '/AdminLogin'
-    | '/MobileAppHome'
-    | '/MobileAppSignIn'
-    | '/ScannerApp'
+    | '/CheckInPage'
+    | '/HomePage'
+    | '/KioskPage'
+    | '/LoginPage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AdminLoginRoute: typeof AdminLoginRoute
-  MobileAppHomeRoute: typeof MobileAppHomeRoute
-  MobileAppSignInRoute: typeof MobileAppSignInRoute
-  ScannerAppRoute: typeof ScannerAppRoute
+  CheckInPageRoute: typeof CheckInPageRoute
+  HomePageRoute: typeof HomePageRoute
+  KioskPageRoute: typeof KioskPageRoute
+  LoginPageRoute: typeof LoginPageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/ScannerApp': {
-      id: '/ScannerApp'
-      path: '/ScannerApp'
-      fullPath: '/ScannerApp'
-      preLoaderRoute: typeof ScannerAppRouteImport
+    '/LoginPage': {
+      id: '/LoginPage'
+      path: '/LoginPage'
+      fullPath: '/LoginPage'
+      preLoaderRoute: typeof LoginPageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/MobileAppSignIn': {
-      id: '/MobileAppSignIn'
-      path: '/MobileAppSignIn'
-      fullPath: '/MobileAppSignIn'
-      preLoaderRoute: typeof MobileAppSignInRouteImport
+    '/KioskPage': {
+      id: '/KioskPage'
+      path: '/KioskPage'
+      fullPath: '/KioskPage'
+      preLoaderRoute: typeof KioskPageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/MobileAppHome': {
-      id: '/MobileAppHome'
-      path: '/MobileAppHome'
-      fullPath: '/MobileAppHome'
-      preLoaderRoute: typeof MobileAppHomeRouteImport
+    '/HomePage': {
+      id: '/HomePage'
+      path: '/HomePage'
+      fullPath: '/HomePage'
+      preLoaderRoute: typeof HomePageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/CheckInPage': {
+      id: '/CheckInPage'
+      path: '/CheckInPage'
+      fullPath: '/CheckInPage'
+      preLoaderRoute: typeof CheckInPageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/AdminLogin': {
@@ -159,9 +179,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AdminLoginRoute: AdminLoginRoute,
-  MobileAppHomeRoute: MobileAppHomeRoute,
-  MobileAppSignInRoute: MobileAppSignInRoute,
-  ScannerAppRoute: ScannerAppRoute,
+  CheckInPageRoute: CheckInPageRoute,
+  HomePageRoute: HomePageRoute,
+  KioskPageRoute: KioskPageRoute,
+  LoginPageRoute: LoginPageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

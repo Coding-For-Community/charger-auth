@@ -1,23 +1,35 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { SignInButton } from '../components/SignInButton';
 import { Paper, rem, Text, TextInput, Title } from '@mantine/core';
-import { tryAdminLogin } from '../utils/tryAdminLogin';
+import { useMutation } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useState } from "react";
+import { fetchBackend } from '../api/fetchBackend';
+import { SignInButton } from '../components/SignInButton';
 
 export const Route = createFileRoute('/AdminLogin')({
   component: AdminLogin,
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirectUrl: (search.redirectUrl as string)?.replace("#", "") ?? '/Admin'
+  }),
 })
 
 function AdminLogin() {
-  const router = useRouter();
+  const navigate = useNavigate()
+  const { redirectUrl } = Route.useSearch()
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const loginM = useMutation<boolean, Error, string>({
-    mutationFn: (pwd) => tryAdminLogin(pwd),
+    mutationFn: async (password) => {
+      const res = await fetchBackend("/checkin/adminLogin/", {
+        method: "POST",
+        credentials: 'include',
+        body: JSON.stringify({ password })
+      })
+      return (await res.json())["success"]
+    },
     onSuccess: (success) => {
       if (success) {
-        router.history.back()
+        console.log("REDIRECT URL: ", redirectUrl)
+        navigate({ to: redirectUrl })
       } else {
         setError("Invalid password. Please try again.");
       }
@@ -26,6 +38,7 @@ function AdminLogin() {
       setError("An error occurred. Please try again.");
     },
   });
+
 
   if (loginM.data) {
     return <div>✅ Logged in successfully</div>;

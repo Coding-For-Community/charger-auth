@@ -1,7 +1,10 @@
+"""
+Endpoints for push notification support.
+"""
 import os
-
 import ninja
 
+from base64 import b64decode
 from dotenv import load_dotenv
 from ninja.errors import HttpError
 from pywebpush import webpush, WebPushException
@@ -14,10 +17,10 @@ load_dotenv()
 
 router = ninja.Router()
 
-class NeedsUserId(ninja.Schema):
-    user_id: int
+class NeedsEmail(ninja.Schema):
+    email_b64: str
 
-class NeedsUserIdAndSubscription(NeedsUserId):
+class NeedsEmailAndSubscription(NeedsEmail):
     subscription: dict
 
 @router.get("/publicKey/")
@@ -26,63 +29,59 @@ def vapid_public_key(request):
         "publicKey": os.environ["VAPID_PUBLIC_KEY"]
     }
 
-@router.get("/enabled/{int:user_id}/")
-async def is_registered(request, user_id: int):
-    student = await get_student(user_id)
+@router.get("/enabled/{email_b64}/")
+async def is_registered(request, email_b64: str):
+    student = await get_student(email_b64)
     data = await SubscriptionData.objects.filter(student=student).afirst()
     return { "registered": bool(data) }
 
 @router.post("/register/")
-async def register_webpush(request, data: NeedsUserIdAndSubscription):
-    student = await get_student(data.user_id)
-    await SubscriptionData.objects.acreate(
+async def register_webpush(request, data: NeedsEmailAndSubscription):
+    student = await get_student(data.email_b64)
+    await SubscriptionData(
         student=student,
         subscription=data.subscription
-    )
+    ).asave()
     return { "success": True }
 
 @router.post("/unregister/")
-async def unregister_webpush(request, data: NeedsUserId):
-    student = await get_student(data.user_id)
+async def unregister_webpush(request, data: NeedsEmail):
+    student = await get_student(data.email_b64)
     await SubscriptionData.objects.filter(student=student).adelete()
     return { "success": True }
 
-async def get_student(student_id: int):
-    student = await Student.objects.filter(id=student_id).afirst()
+async def get_student(email_b64: str):
+    student = await Student.objects.filter(email=b64decode(email_b64).decode('utf-8')).afirst()
     if not student:
         raise HttpError(400, "Student does not exist")
     return student
 
 if settings.DEBUG:
-    @router.get("/test/{int:userid}")
-    def test(request, userid: int):
-        student = Student.objects.filter(id=userid).first()
-        if not student:
-            raise HttpError(400, "Student does not exist")
-        data = SubscriptionData.objects.filter(student=student).first()
-        if data:
-            run_webpush(data)
+    @router.get("/test/{email_b64}")
+    async def test(request, email_b64: str):
+        student = await get_student(email_b64)
+        data = await SubscriptionData.objects.filter(student=student).afirst()
+        if data is None:
+            return { "success": False }
+        try:
+            webpush(
+                subscription_info=data.subscription,
+                data="Mary had a little lamb, with a nice mint jelly",
+                vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
+                vapid_claims={
+                    "sub": "mailto:" + data.student.email,
+                }
+            )
             return { "success": True }
-        else:
+        except WebPushException as ex:
+            print("I'm sorry, Dave, but I can't do that: {}", repr(ex))
+            # Mozilla returns additional information in the body of the response.
+            if ex.response is not None and ex.response.json():
+                extra = ex.response.json()
+                print("Remote service replied with a {}:{}, {}",
+                      extra.code,
+                      extra.errno,
+                      extra.message
+                      )
             return { "success": False }
 
-def run_webpush(data: SubscriptionData):
-    try:
-        webpush(
-            subscription_info=data.subscription,
-            data="Mary had a little lamb, with a nice mint jelly",
-            vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
-            vapid_claims={
-                "sub": "mailto:" + data.student.email,
-            }
-        )
-    except WebPushException as ex:
-        print("I'm sorry, Dave, but I can't do that: {}", repr(ex))
-        # Mozilla returns additional information in the body of the response.
-        if ex.response is not None and ex.response.json():
-            extra = ex.response.json()
-            print("Remote service replied with a {}:{}, {}",
-                  extra.code,
-                  extra.errno,
-                  extra.message
-                  )

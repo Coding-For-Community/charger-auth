@@ -5,5 +5,6 @@ export const Route = createFileRoute('/')({
 })
 
 function Index() {
+  console.error("hi!")
   return <div>Welcome to ChargerAuth! Setup instructions here are TODO.</div>
 }

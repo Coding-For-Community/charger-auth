@@ -1,8 +1,8 @@
 # ChargerAuth
 
 ### TODO!!!!!!
-- All students that checked in - add this too!!!!!
-- Only use "US Academic Schedule" for shenanigans
+- Decide between AWS EC2 hosting(Elastic beanstalk doesn't allow sqlite according to aneesh) and Docker container hosting on a random CA computer. If proposition to mr. manakhov succeeds maybe use random CA computer
+- Work out auth - i dont think there's a way to test this in a dev environment, except for face recognition(implemented, but LMAO 50% of CA students dont have one uploaded to blackbaud bruh)
 
 ### Setup
 ```bash

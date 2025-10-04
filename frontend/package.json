@@ -13,16 +13,15 @@
     "deploy": "gh-pages -d build"
   },
   "dependencies": {
-    "@azure/msal-react": "^3.0.19",
+    "@fingerprintjs/fingerprintjs": "^4.6.2",
     "@mantine/core": "^8.2.7",
-    "@mantine/hooks": "^8.2.7",
     "@tanstack/react-query": "^5.85.5",
     "@tanstack/react-router": "^1.131.35",
-    "@tanstack/react-router-devtools": "^1.131.35",
     "qr-scanner": "^1.4.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-media-recorder": "^1.7.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
@@ -30,6 +29,7 @@
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
+    "babel-plugin-import": "^1.13.8",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -38,8 +38,10 @@
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
+    "pwa-asset-generator": "^8.1.2",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
-    "vite": "^7.1.2"
+    "vite": "^7.1.2",
+    "vite-bundle-analyzer": "^1.2.3"
   }
 }

@@ -1,159 +1,48 @@
 import asyncio
-import os
-import schedule
+import logging
+from base64 import b64decode
+from datetime import datetime
 
-from datetime import datetime, time
-from pywebpush import webpush, WebPushException
-from checkin.core.types import FreeBlock, ALL_FREE_BLOCKS
-from checkin.models import Student
-from dotenv import load_dotenv
+from ninja.errors import HttpError
 
-from config import settings
-from notifs.models import SubscriptionData
+from checkin.core.get_now import get_now
+from checkin.core.types import FreeBlock
+from checkin.models import FreeBlockToday, Student, CheckInRecord
 
-load_dotenv()
-time_range_secs = 600
-_free_blocks_today: dict[FreeBlock, time] = {}
-_is_resetting = False
+logger = logging.getLogger(__name__)
 
-def is_resetting():
-    return _is_resetting
-
-def free_blocks_today():
-    return _free_blocks_today.items()
-
-def get_curr_free_block() -> FreeBlock | None:
-    """
-    Fetches the current free block.
-    """
-    now = _get_now()
-    for free_block, start_time in free_blocks_today():
-        if -time_range_secs <= _delta_time(now, start_time) <= time_range_secs:
-            return free_block
+async def get_curr_free_block() -> FreeBlock | None:
+    now = get_now()
+    async for item in FreeBlockToday.objects.all():
+        delta_time_secs = (datetime.combine(now.date(), item.time) - now).total_seconds()
+        if -600 <= delta_time_secs <= 600:
+            return item.block
     return None
 
-async def daily_reset(remove_checked_in_blocks: bool):
-    """
-    Common initialization that should be scheduled to run every day.
-    """
-    from oauth.api import oauth_client
-    global _is_resetting
-    _is_resetting = True
-    client = await oauth_client()
+def get_student(email_b64: str):
+    email = b64decode(email_b64).decode('utf-8')
+    logger.info(f"Email: {email}")
+    return Student.objects.filter(email=email).afirst()
 
-    if remove_checked_in_blocks:
-        update_args = { "free_blocks": "", "checked_in_blocks": "" }
-    else:
-        update_args = { "free_blocks": "" }
-    # Fetch data and reset Students objects
-    today_as_str = _get_now().strftime("%m-%d-%Y")
-    rosters_res, calendar_res, _ = await asyncio.gather(
-        client.get(
-            "https://api.sky.blackbaud.com/school/v1/academics/rosters",
-            headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
-        ),
-        client.get(
-            "https://api.sky.blackbaud.com/school/v1/academics/schedules/master?"
-            f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
-            headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
-        ),
-        Student.objects.all().aupdate(**update_args),
+async def check_in_auto(email_b64: str, device_id: str):
+    free_block = await get_curr_free_block()
+    if not free_block:
+        raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
+    student, checkin_record = await asyncio.gather(
+        get_student(email_b64),
+        CheckInRecord.objects.filter(device_id=device_id).afirst()
     )
-    if rosters_res.status_code != 200:
-        raise Exception("Roster data did not initialize. Err: \n" + rosters_res.text)
-    elif calendar_res.status_code != 200:
-        raise Exception("Calendar data did not initialize. Err: \n" + calendar_res.text)
-
-    # Resets the cached schedule for today
-    calendar_data = calendar_res.json()
-    _free_blocks_today.clear()
-    for schedule_set in calendar_data["value"][0]["schedule_sets"]:
-        if schedule_set["schedule_set_id"] != 3051:
-            continue
-        for block in schedule_set["blocks"]:
-            if block["block"] not in ALL_FREE_BLOCKS:
-                continue
-            _free_blocks_today[block["block"]] = datetime.fromisoformat(block["start_time"]).time()
-        break
-    print("Free blocks today: " + str(_free_blocks_today))
-
-    # Then, initialize the students and the free blocks they have
-    courses = rosters_res.json()
-    num_free_block_courses = 0
-    tasks = []
-    for course in courses:
-        maybe_free_block = _free_block_of(course)
-        if maybe_free_block:
-            num_free_block_courses += 1
-        tasks.extend(_save_student(user, maybe_free_block) for user in course["roster"])
-    await asyncio.gather(*tasks)
-    print(f"Num free block courses: {num_free_block_courses}")
-
-    # Finally, declare resetting as done
-    _is_resetting = False
-
-async def _save_student(user: dict, maybe_free_block: FreeBlock | None = None):
-    if user["leader"].get("type") == "Teacher":
-        return
-    data = user["user"]
-    student, _ = await Student.objects.aget_or_create(id=data["id"], defaults={ "checked_in_blocks": "" })
-    student.name = f"{data['first_name']} {data['last_name']}"
-    if data['middle_name']:
-        student.name = student.name.replace(" ", f" {data['middle_name']} ")
-    student.email = data["email"]
-    if maybe_free_block:
-        if maybe_free_block not in _free_blocks_today:
-            raise Exception(f"Free block {maybe_free_block} not found in today's calendar")
-        student.free_blocks += maybe_free_block
-        block_time = _free_blocks_today[maybe_free_block]
-        run_time = time(block_time.hour, block_time.minute + 5).strftime("%H:%M")
-        print(run_time)
-        schedule.every().day.at(run_time).do(lambda: asyncio.create_task(__remind_student(student)))
-    await student.asave()
-
-def _free_block_of(course: dict) -> FreeBlock | None:
-    now = _get_now()
-    name = course["section"]["name"]
-    is_correct_sem = (now.month <= 5 and "S2" in name) or (now.month >= 7 and "S1" in name)
-    free_block = course["section"].get("block")
-    if not is_correct_sem or not free_block:
-        return None
-    for block, _ in free_blocks_today():
-        if block == free_block["name"]:
-            return block
-    return None
-
-def _delta_time(now: datetime, target: time):
-    return (datetime.combine(now.date(), target) - now).total_seconds()
-
-# used for shimming time
-def _get_now():
-    if settings.DEBUG:
-        return datetime(2025, 9, 10, 9)
+    if not student:
+        raise HttpError(400, "Invalid Student")
+    if checkin_record:
+        if free_block in checkin_record.free_blocks:
+            raise HttpError(409, "This device has already checked in from another student's account.")
+        else:
+            checkin_record.free_blocks += free_block
+            await checkin_record.asave()
     else:
-        return datetime.now()
-
-async def __remind_student(student: Student):
-    data = await SubscriptionData.objects.filter(student=student).afirst()
-    if data:
-        try:
-            webpush(
-                subscription_info=data.subscription,
-                data="Looks like you haven't signed in for your free block - make sure to do that in 5 min.",
-                vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
-                vapid_claims={
-                    "sub": "mailto:" + data.student.email,
-                }
-            )
-        except WebPushException as ex:
-            print("I'm sorry, Dave, but I can't do that: {}", repr(ex))
-            # Mozilla returns additional information in the body of the response.
-            if ex.response is not None and ex.response.json():
-                extra = ex.response.json()
-                print(
-                    "Remote service replied with a {}:{}, {}",
-                    extra.code,
-                    extra.errno,
-                    extra.message
-                )
-    return schedule.CancelJob()
+        await CheckInRecord(device_id=device_id).asave()
+    if free_block not in student.checked_in_blocks:
+        student.checked_in_blocks += free_block
+        await student.asave()
+    return student

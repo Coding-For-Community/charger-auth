@@ -9,8 +9,10 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+import json
 import os
 import sys
+
 from pathlib import Path
 from corsheaders.defaults import default_headers
 
@@ -41,10 +43,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'checkin',
     'oauth',
-    'corsheaders',
-    'notifs'
+    'notifs',
 ]
 
 MIDDLEWARE = [
@@ -103,7 +105,7 @@ ASGI_APPLICATION = 'config.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'dev.sqlite3' if DEBUG else 'prod.sqlite3',
+        'NAME': BASE_DIR / 'dev.sqlite3' if DEBUG else 'prod.sqlite3'
     }
 }
 
@@ -151,3 +153,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 SESSION_COOKIE_HTTPONLY = True
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+with open('loggingConfig.json', 'r') as f:
+    LOGGING = json.loads(f.read())

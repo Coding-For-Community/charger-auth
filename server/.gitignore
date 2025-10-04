@@ -2,4 +2,8 @@
 __pycache__
 staticfiles
 dev.sqlite3
+dev.sqlite3-shm
+dev.sqlite3-wal
 .env
+media/
+logutil/main.log.1
