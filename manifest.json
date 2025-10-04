@@ -1,6 +1,7 @@
 {
   "name": "ChargerAuth",
   "description": "A description of your awesome application.",
+  "start_url": "/charger-auth/#/HomePage",
   "display": "fullscreen",
   "background_color": "#ffffff",
   "theme_color": "#000000",
