@@ -1,22 +1,25 @@
-import { Card, Center, Loader, Title } from "@mantine/core";
+import { Button, Group, Loader, Modal, Title } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { fetchBackend } from "../api/fetchBackend";
 
 export default function VideoPlayer(props: {
-  freeBlock: string,
-  studentEmail: string,
-  studentName: string
+  opened: boolean,
+  onClose: () => void,
+  students: any[],
+  freeBlock: string
 }) {
+  const [index, setIndex] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const currStudent = props.students[index]
+  const numStudents = props.students.length
 
   useEffect(() => {
     let objectUrl: string | null = null;
     setLoading(true);
-    fetchBackend(
-      `/checkin/studentVid?free_block=${props.freeBlock}
-      &email_b64=${btoa(props.studentEmail)}`
-    )
+    let endpoint = `/checkin/studentVid?free_block=${props.freeBlock}`
+    endpoint += `&email_b64=${btoa(currStudent.email)}`
+    fetchBackend(endpoint)
       .then(res => res.blob())
       .then(blob => {
         objectUrl = URL.createObjectURL(blob);
@@ -31,22 +34,46 @@ export default function VideoPlayer(props: {
     };
   }, [props]);
 
+  if (!props.students || numStudents === 0) {
+    return (
+      <Modal opened={props.opened} onClose={props.onClose} centered>
+        <Title order={4} mb="md">No tentative student videos available.</Title>
+      </Modal>
+    );
+  }
+
   return (
-    <Center style={{ minHeight: "300px" }}>
-      <Card shadow="md" radius="md" p="lg" style={{ width: 400 }}>
-        <Title order={4} mb="md">Video from {props.studentName}</Title>
-        {loading ? (
-          <Loader size="lg" />
-        ) : (
-          videoUrl && (
-            <video
-              src={videoUrl}
-              controls
-              style={{ width: "100%", borderRadius: 8 }}
-            />
-          )
-        )}
-      </Card>
-    </Center>
+    <Modal opened={props.opened} onClose={props.onClose} centered size="lg">
+      <Group justify="space-between" mb="md">
+        <Button
+          disabled={index === 0}
+          onClick={() => setIndex(i => Math.max(0, i - 1))}
+          variant="subtle"
+        >
+          Previous
+        </Button>
+        <Title order={4}>
+          Video {index + 1} of {numStudents} ({currStudent["name"]})
+        </Title>
+        <Button
+          disabled={index === numStudents - 1}
+          onClick={() => setIndex(i => Math.min(numStudents - 1, i + 1))}
+          variant="subtle"
+        >
+          Next
+        </Button>
+      </Group>
+      {loading ? (
+        <Loader size="lg" />
+      ) : (
+        videoUrl && (
+          <video
+            src={videoUrl}
+            controls
+            style={{ width: "100%", borderRadius: 8 }}
+          />
+        )
+      )}
+    </Modal>
   );
 }

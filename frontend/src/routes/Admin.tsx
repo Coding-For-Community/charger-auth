@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Button, Checkbox, CloseButton, Divider, Group, Loader, Modal, Paper, rem, ScrollArea, Select, Text, TextInput, Title } from '@mantine/core';
+import { ActionIcon, AppShell, Button, Checkbox, CloseButton, Divider, Group, Loader, Paper, rem, ScrollArea, Select, Text, TextInput, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { lazy, useState } from 'react';
@@ -155,7 +155,7 @@ function Admin() {
         </Group>
       </AppShell.Main>
 
-      <VideosModal 
+      <VideoPlayer 
         opened={vidsOpened} 
         onClose={() => setVidsOpened(false)}
         freeBlock={block}
@@ -218,51 +218,5 @@ function StudentListing(props: {
         />
       </Group>
     </Paper>
-  );
-}
-
-function VideosModal(props: {
-  opened: boolean,
-  onClose: () => void,
-  students: any[],
-  freeBlock: string
-}) {
-  const [index, setIndex] = useState(0);
-
-  if (!props.students || props.students.length === 0) {
-    return (
-      <Modal opened={props.opened} onClose={props.onClose} centered>
-        <Title order={4} mb="md">No tentative student videos available.</Title>
-      </Modal>
-    );
-  }
-
-  const current = props.students[index];
-
-  return (
-    <Modal opened={props.opened} onClose={props.onClose} centered size="lg">
-      <Group justify="space-between" mb="md">
-        <Button
-          disabled={index === 0}
-          onClick={() => setIndex(i => Math.max(0, i - 1))}
-          variant="subtle"
-        >
-          Previous
-        </Button>
-        <Title order={4}>Video {index + 1} of {props.students.length}</Title>
-        <Button
-          disabled={index === props.students.length - 1}
-          onClick={() => setIndex(i => Math.min(props.students.length - 1, i + 1))}
-          variant="subtle"
-        >
-          Next
-        </Button>
-      </Group>
-      <VideoPlayer
-        freeBlock={props.freeBlock}
-        studentEmail={current["email"]}
-        studentName={current["name"]}
-      />
-    </Modal>
   );
 }

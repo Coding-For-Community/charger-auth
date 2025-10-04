@@ -15,7 +15,7 @@ export default function RecordView(props: FaceCheckProps) {
     stopRecording,
     mediaBlobUrl,
     previewStream
-  } = useReactMediaRecorder({ video: true });
+  } = useReactMediaRecorder({ video: true, audio: false });
 
   useEffect(() => {
     // Start recording immediately on mount
