@@ -1,19 +1,41 @@
 import { Loader, Stack, Text, Title } from "@mantine/core";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { lazy, useEffect, useState } from "react";
+import { attemptCheckIn as checkIn, useCheckinTokenQ, useFingerprintQ, type CheckInResult } from '../api/checkIn.ts';
+import { useB64EmailRedirect } from "../api/perms.ts";
 import { IconAlertTriangle, IconCheck } from "../components/icons.tsx";
-import { attemptCheckIn, type CheckInResult } from '../utils/attemptCheckIn.ts';
-import { useB64EmailRedirect } from "../utils/perms.ts";
 
 export const Route = createFileRoute("/CheckInPage")({
   component: CheckInPage
 })
 
+const SnapEvidence = lazy(() => import(`../components/SnapEvidence.tsx`))
+
 function CheckInPage() {
   const [status, setStatus] = useState<CheckInResult>({ status: "loading" })
-  useB64EmailRedirect({
-    onEmailResolve: email => attemptCheckIn(email).then(setStatus)
-  })
+  const { emailB64 } = useB64EmailRedirect()
+  const tokenQ = useCheckinTokenQ()
+  const fingerprintQ = useFingerprintQ()
+
+  useEffect(() => {
+    if (tokenQ.data && fingerprintQ.data) {
+      checkIn(emailB64, tokenQ.data["token"], fingerprintQ.data).then(setStatus)
+    }
+  }, [tokenQ.data, fingerprintQ.data])
+
+  if (tokenQ.data == 0) {
+    return (
+      <SnapEvidence
+        title=""
+        subtitle=""
+        onSend={async (file) => {
+          console.log("Got here?")
+          setStatus({ status: "loading" })
+          checkIn(emailB64, tokenQ.data["token"], fingerprintQ.data!, file).then(setStatus)
+        }}
+      />
+    )
+  }
 
   let content = <></>
   switch (status.status) {

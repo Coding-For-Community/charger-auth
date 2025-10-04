@@ -2,9 +2,9 @@ import { rem, Stack, Text, TextInput } from "@mantine/core"
 import { useMutation } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect, useState, type FormEvent } from "react"
+import { fetchBackend } from "../api/fetchBackend"
 import { SignInButton } from "../components/SignInButton"
 import { EMAIL_KEY } from "../utils/constants"
-import { fetchBackend } from "../utils/fetchBackend"
 
 export const Route = createFileRoute('/LoginPage')({
   component: LoginPage,

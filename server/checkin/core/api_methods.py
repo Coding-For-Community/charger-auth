@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from base64 import b64decode
 from datetime import datetime
 
@@ -7,6 +8,8 @@ from ninja.errors import HttpError
 from checkin.core.get_now import get_now
 from checkin.core.types import FreeBlock
 from checkin.models import FreeBlockToday, Student, CheckInRecord
+
+logger = logging.getLogger(__name__)
 
 async def get_curr_free_block() -> FreeBlock | None:
     now = get_now()
@@ -17,7 +20,9 @@ async def get_curr_free_block() -> FreeBlock | None:
     return None
 
 def get_student(email_b64: str):
-    return Student.objects.filter(email=b64decode(email_b64).decode('utf-8')).afirst()
+    email = b64decode(email_b64).decode('utf-8')
+    logger.info(f"Email: {email}")
+    return Student.objects.filter(email=email).afirst()
 
 async def check_in_auto(email_b64: str, device_id: str):
     free_block = await get_curr_free_block()

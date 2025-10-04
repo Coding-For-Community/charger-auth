@@ -4,6 +4,7 @@ Tokens are cached in the database and fetched upon startup.
 To generate a new token, run `py manage.py bboauth` in the terminal AFTER the server
 is started with `py main.py` on a different terminal.
 """
+import logging
 import os
 import ninja
 
@@ -15,6 +16,8 @@ from oauth.models import BlackbaudToken
 load_dotenv()
 os.environ['AUTHLIB_INSECURE_TRANSPORT'] = "1" if settings.DEBUG else "0"
 
+logger = logging.getLogger(__name__)
+
 async def oauth_client(fetch_token=True):
     """
     Fetches the oauth client, used for get requests to the blackbaud api.
@@ -22,7 +25,7 @@ async def oauth_client(fetch_token=True):
     if fetch_token and oauth.token is None:
         token = await BlackbaudToken.objects.afirst()
         oauth.token = token.to_dict() if token else None
-        print("Blackbaud token was just initialized.")
+        logger.info("Blackbaud token was just initialized.")
     return oauth
 
 # noinspection PyUnusedLocal

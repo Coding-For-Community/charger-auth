@@ -2,9 +2,9 @@ import { ActionIcon, AppShell, Button, Card, Group, Modal, rem, Space, Stack, Ti
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import QrScanner from "qr-scanner";
 import { useEffect, useRef, useState } from "react";
+import { useB64EmailRedirect } from "../api/perms";
+import { disablePushNotifs, enablePushNotifs } from "../api/pushNotifs";
 import { IconSettings2 } from "../components/icons";
-import { useB64EmailRedirect } from "../utils/perms";
-import { disablePushNotifs, enablePushNotifs } from "../utils/pushNotifs";
 
 export const Route = createFileRoute("/HomePage")({
   component: HomePage

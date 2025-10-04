@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import schedule
 
@@ -6,10 +7,12 @@ from django.core.management import BaseCommand
 from pywebpush import webpush, WebPushException
 from checkin.core.get_now import get_now
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
-from checkin.models import Student, FreeBlockToday, CheckInRecord, BackgroundExecutorRequests
+from checkin.models import Student, FreeBlockToday, CheckInRecord, BackgroundExecutorRequests, CheckInVideo
 from datetime import datetime, time
 from dotenv import load_dotenv
 from notifs.models import SubscriptionData
+
+logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'When run, periodically resets the database data at a certain time(7:00 by default) every day'
@@ -36,7 +39,7 @@ class Command(BaseCommand):
             return
 
     async def main(self, scheduled_time: str):
-        print("Daily reset task started.")
+        logger.info("Daily reset task started.")
         await self.daily_reset(False)
         schedule.every().day.at(scheduled_time).do(
             lambda: asyncio.create_task(self.daily_reset(True))
@@ -48,20 +51,22 @@ class Command(BaseCommand):
                 BackgroundExecutorRequests.objects.afirst()
             )
             if bg_reqs and bg_reqs.desire_manual_reset and self.reset_count < 3:
+                logger.info("Manual reset requested.")
                 await self.daily_reset(False)
                 bg_reqs.desire_manual_reset = False
                 await bg_reqs.asave()
                 self.reset_count += 1
 
-    async def daily_reset(self, remove_checked_in_blocks: bool):
+    async def daily_reset(self, reset_state: bool):
         """
         Common initialization that should be scheduled to run every day.
         """
         from oauth.api import oauth_client
         client = await oauth_client()
 
-        if remove_checked_in_blocks:
+        if reset_state:
             update_args = {"free_blocks": "", "checked_in_blocks": ""}
+            await CheckInVideo.objects.all().adelete()
         else:
             update_args = {"free_blocks": ""}
         # Fetch data and reset Students objects
@@ -106,8 +111,7 @@ class Command(BaseCommand):
                 num_free_block_courses += 1
             tasks.extend(self._save_student(user, maybe_free_block) for user in course["roster"])
         await asyncio.gather(*tasks)
-        print(f"Num free block courses: {num_free_block_courses}")
-
+        logger.info(f"Num free block courses: {num_free_block_courses}")
         await CheckInRecord.objects.all().adelete()
 
     async def _save_student(self, user: dict, maybe_free_block: FreeBlock | None = None):
@@ -155,7 +159,6 @@ async def __remind_student(student: Student):
                 }
             )
         except WebPushException as ex:
-            print("I'm sorry, Dave, but I can't do that: {}", repr(ex))
             # Mozilla returns additional information in the body of the response.
             if ex.response is not None and ex.response.json():
                 extra = ex.response.json()

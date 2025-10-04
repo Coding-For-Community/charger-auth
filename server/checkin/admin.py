@@ -1,5 +1,5 @@
 from django.contrib import admin
-from checkin.models import Student, CheckInRecord, FreeBlockToday
+from checkin.models import Student, CheckInRecord, FreeBlockToday, CheckInVideo
 
 
 class StudentsAdmin(admin.ModelAdmin):
@@ -10,3 +10,4 @@ class StudentsAdmin(admin.ModelAdmin):
 admin.site.register(Student, StudentsAdmin)
 admin.site.register(CheckInRecord)
 admin.site.register(FreeBlockToday)
+admin.site.register(CheckInVideo)

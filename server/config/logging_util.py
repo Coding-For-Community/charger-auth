@@ -3,7 +3,7 @@ import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-our_apps = ['checkin', 'oauth', 'notifs']
+our_apps = ['checkin', 'oauth', 'notifs', 'config']
 curr_log_ctx = ContextVar("curr_log_ctx", default={})
 
 class _StdoutFormatter(logging.Formatter):
@@ -26,7 +26,7 @@ class _StdoutFormatter(logging.Formatter):
             case "WARNING":
                 color = f"\033[{darkness}3m"
             case "ERROR" | "CRITICAL":
-                color = f"\033[4m\033[{darkness}5m"
+                color = f"\033[31m"
         record.color = color
         if "uvicorn" in record.name:
             record.name = "uvicorn"

@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { EMAIL_KEY } from "./constants";
+import { EMAIL_KEY } from "../utils/constants";
 import { fetchBackend } from "./fetchBackend";
 
 export interface AdminPerms {
   isAdmin: boolean
-  manualCheckIn?: boolean
+  teacherMonitored?: boolean
 }
 
 async function adminPerms(): Promise<AdminPerms> {
@@ -33,23 +33,14 @@ export function useAdminLoginRedirect() {
   })
 }
 
-export function useB64EmailRedirect(args?: {
-  onEmailResolve: (e: string) => void
-}) {
-  function resolve() {
+export function useB64EmailRedirect() {
+  const navigate = useNavigate()
+  const emailB64 = btoa(window.localStorage.getItem(EMAIL_KEY) ?? "")
+
+  useEffect(() => {
     if (!emailB64 || emailB64 === '') {
       navigate({ to: "/LoginPage" })
-    } else {
-      args?.onEmailResolve(emailB64)
     }
-  }
-
-  const emailB64 = btoa(window.localStorage.getItem(EMAIL_KEY) ?? "")
-  const navigate = useNavigate()
-  useEffect(() => {
-    resolve()
-    window.addEventListener('hashchange', resolve)
-    return () => window.removeEventListener('hashchange', resolve)
   }, [])
 
   return { 

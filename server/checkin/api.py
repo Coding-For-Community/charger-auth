@@ -1,69 +1,66 @@
 """
 Stores the main free period check-in endpoints.
 """
+import logging
 import ninja
 
-from datetime import datetime
-
 from django.contrib.auth import aauthenticate, alogin
-from django.http import HttpRequest
-from ninja import File, UploadedFile
+from django.http import HttpRequest, FileResponse
+from ninja import UploadedFile, Form, File
 from ninja.errors import HttpError
 
 from checkin.core.api_methods import get_curr_free_block, get_student, check_in_auto
-from checkin.core.checkin_token import curr_token, token_valid, update_checkin_token
 from checkin.core.compress_video import compress_video
+from checkin.core.random_token_manager import RandomTokenManager
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import Student, CheckInVideo
-from checkin.schema import CheckInSchema, AdminLoginSchema, ManualCheckInSchema
+from checkin.schema import CheckInSchema, AdminLoginSchema, ManualCheckInSchema, TentativeCheckInSchema
 from config import settings
 from oauth.api import oauth_client
 
 router = ninja.Router()
+token_manager = RandomTokenManager(interval_secs=5)
+logger = logging.getLogger(__name__)
 
 @router.get("/token/")
 async def checkin_token(request: HttpRequest, last_token: str | None = None):
     if not (await perms(request)).get("isAdmin"):
         if not last_token:
             raise HttpError(401, "Scanner App not logged in.")
-        elif not token_valid(last_token):
+        elif not token_manager.validate(last_token):
             raise HttpError(403, "Invalid last_token.")
-    delta_secs = (datetime.now() - curr_token().timestamp).total_seconds()
-    if delta_secs < 0 or delta_secs > 5:
-        update_checkin_token()
-        return {
-            "token": str(curr_token().uuid),
-            "time_until_refresh": 5,
-        }
-    return {
-        "token": str(curr_token().uuid),
-        "time_until_refresh": 5 - delta_secs,
-    }
+    return token_manager.get()
 
-@router.get("/notCheckedInStudents/{free_block}/")
-async def not_checked_in_students(request, free_block: FreeBlock):
+@router.get("/students/{free_block}/")
+async def fetch_students(request, free_block: FreeBlock):
     if free_block not in ALL_FREE_BLOCKS:
         raise HttpError(400, "Invalid free block: " + free_block)
-    students = Student.objects.all()
     output = []
-    async for student in students:
-        if free_block in student.free_blocks and free_block not in student.checked_in_blocks:
-            output.append({
-                "id": student.id,
-                "name": student.name,
-            })
-    return { "students": output }
-
-@router.get("/checkedInStudents/{free_block}/")
-async def checked_in_students(request, free_block: FreeBlock):
-    if free_block not in ALL_FREE_BLOCKS:
-        raise HttpError(400, "Invalid free block: " + free_block)
     students = Student.objects.all()
-    output = []
     async for student in students:
+        if free_block not in student.free_blocks:
+            continue
         if free_block in student.checked_in_blocks:
-            output.append(student.name)
-    return { "students": output }
+            has_vid = await student.videos.filter(block=free_block).afirst()
+            checked_in = "tentative" if has_vid else "yes"
+        else:
+            checked_in = "no"
+        output.append({
+            "name": student.name,
+            "checked_in": checked_in,
+            "email": student.email
+        })
+    return output
+
+@router.get("/studentVid/")
+async def student_vid(request, free_block: FreeBlock, email_b64: str):
+    student = await get_student(email_b64)
+    if not student:
+        raise HttpError(400, "Invalid Student")
+    vid = await student.videos.filter(block=free_block).afirst()
+    if not vid:
+        raise HttpError(402, "No Video found")
+    return FileResponse(vid.file.open(), as_attachment=True, filename=vid.file.name)
 
 @router.get("/freeBlockNow/")
 async def free_block_now(request):
@@ -92,18 +89,16 @@ async def student_exists(request, email_b64: str):
 async def perms(request: HttpRequest):
     user = await request.auser()
     if not (user.is_authenticated and user.is_superuser):
-        print("NO PERMS!")
         return { "isAdmin": False }
-    print("YES PERMS!")
     return {
         "isAdmin": True,
-        "manualCheckIn": user.username == "ManualEnabledScannerAppUser"
+        "teacherMonitored": user.username == "TeacherMonitoredKiosk"
     }
 
 @router.post("/run/")
 async def check_in_student(request, data: CheckInSchema):
-    ip_invalid = request.META.get('HTTP_X_FORWARDED_FOR') not in settings.ALLOWED_CHECK_IN_IPS
-    if not token_valid(data.checkin_token) or ip_invalid:
+    # ip_invalid = request.META.get('HTTP_X_FORWARDED_FOR') not in settings.ALLOWED_CHECK_IN_IPS
+    if not token_manager.validate(data.checkin_token):
         raise HttpError(403, "IP/Token invalid - retry with /checkin/runTentative/.")
     student = await check_in_auto(data.email_b64, data.device_id)
     return {
@@ -113,16 +108,17 @@ async def check_in_student(request, data: CheckInSchema):
 @router.post("/runTentative/")
 async def check_in_student_tentative(
     request,
-    data: CheckInSchema,
+    input_data: TentativeCheckInSchema,
     raw_video: File[UploadedFile]
 ):
     curr_free_block = await get_curr_free_block()
-    student = await check_in_auto(data.email_b64, data.device_id)
+    student = await check_in_auto(input_data.email_b64, input_data.device_id)
 
-    student.has_checkin_vids = True
-    raw_video.name = f"{student.name}-{curr_free_block}.mp4"
+    raw_video.name = f"{student.name}-{curr_free_block}.webm"
     with compress_video(raw_video) as video_file:
-        CheckInVideo(student=student).file.save(video_file.name, video_file)
+        vid_obj = CheckInVideo(student=student, block=get_curr_free_block())
+        vid_obj.file.save(video_file.name, video_file)
+        await vid_obj.asave()
 
     return { "studentName": student.name }
 
@@ -147,13 +143,13 @@ async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchem
 
 @router.post("/adminLogin/")
 async def admin_login(request: HttpRequest, data: AdminLoginSchema):
-    res = await aauthenticate(request, username="ScannerAppUser", password=data.password)
+    res = await aauthenticate(request, username="Kiosk", password=data.password)
     if res is None or not res.is_superuser:
-        res = await aauthenticate(request, username="ManualEnabledScannerAppUser", password=data.password)
+        res = await aauthenticate(request, username="TeacherMonitoredKiosk", password=data.password)
     if res is None or not res.is_superuser:
         return { "success": False }
     await alogin(request, user=res)
-    print("hi yeah this is successful.")
+    logger.info("Admin login success.")
     return { "success": True }
 
 if settings.DEBUG:

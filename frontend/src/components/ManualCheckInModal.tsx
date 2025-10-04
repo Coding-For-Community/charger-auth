@@ -1,15 +1,15 @@
 import { Affix, Button, Center, Modal, TextInput, Title } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { fetchBackend } from '../utils/fetchBackend'
-import type { AdminPerms } from '../utils/perms'
+import { fetchBackend } from '../api/fetchBackend'
+import type { AdminPerms } from '../api/perms'
 import { SignInButton } from './SignInButton'
 
 interface ManualCheckInProps { 
   perms?: AdminPerms
 }
 
-export function ManualCheckInModal(props: ManualCheckInProps) {
+export default function ManualCheckInModal(props: ManualCheckInProps) {
   const [modalOpen, setModalOpen] = useState(false)
   const [studentId, setStudentId] = useState("")
   const checkinQ = useQuery({
@@ -48,7 +48,7 @@ export function ManualCheckInModal(props: ManualCheckInProps) {
 
   return (
     <>
-      <Affix bottom={200} w="100%" display={props.perms?.manualCheckIn ? undefined : "none"}>
+      <Affix bottom={200} w="100%" display={props.perms?.teacherMonitored ? undefined : "none"}>
         <Center>
           <Button 
             bg="red" 

@@ -2,14 +2,14 @@ import { Center, Loader, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy } from "react";
-import { ManualCheckInModal } from "../components/ManualCheckInModal";
-import { fetchBackend } from "../utils/fetchBackend";
-import { useAdminLoginRedirect } from "../utils/perms";
+import { fetchBackend } from "../api/fetchBackend";
+import { useAdminLoginRedirect } from "../api/perms";
 
 export const Route = createFileRoute("/KioskPage")({
   component: KioskPage
 })
 
+const ManualCheckInModal = lazy(() => import("../components/ManualCheckInModal"))
 const QRCodeSVG = lazy(
   () => import("qrcode.react").then(module => ({ default: module.QRCodeSVG })
 ))

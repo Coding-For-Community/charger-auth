@@ -11,6 +11,10 @@ class CheckInSchema(Schema):
     checkin_token: str
     device_id: str
 
+class TentativeCheckInSchema(Schema):
+    email_b64: str
+    device_id: str
+
 class CustomFreeBlockSchema(Schema):
     label: FreeBlock
     hour: int
