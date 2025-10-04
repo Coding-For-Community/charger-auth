@@ -15,6 +15,7 @@ export default function EvidencePlayer(props: {
   const numStudents = props.students.length
 
   useEffect(() => {
+    if (numStudents == 0 || !props.opened) return;
     let objectUrl: string | null = null;
     setLoading(true);
     let endpoint = `/checkin/studentVid?free_block=${props.freeBlock}`
