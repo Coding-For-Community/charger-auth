@@ -2,6 +2,9 @@
 Stores the main free period check-in endpoints.
 """
 import logging
+import uuid
+from base64 import b64encode
+
 import ninja
 from asgiref.sync import sync_to_async
 
@@ -10,7 +13,7 @@ from django.http import HttpRequest, FileResponse
 from ninja import UploadedFile, Form, File
 from ninja.errors import HttpError
 
-from checkin.core.api_methods import get_curr_free_block, get_student, check_in_auto
+from checkin.core.api_methods import get_curr_free_block, get_student, check_in
 from checkin.core.compress_video import compress_video
 from checkin.core.random_token_manager import RandomTokenManager
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
@@ -20,17 +23,26 @@ from config import settings
 from oauth.api import oauth_client
 
 router = ninja.Router()
-token_manager = RandomTokenManager(interval_secs=5)
+kiosk_token_manager = RandomTokenManager(interval_secs=5)
+print("Hi!")
+user_tokens = []
+
 logger = logging.getLogger(__name__)
 
-@router.get("/token/")
-async def checkin_token(request: HttpRequest, last_token: str | None = None):
+@router.get("/kioskToken/")
+async def token_for_kiosk(request: HttpRequest):
     if not (await perms(request)).get("isAdmin"):
-        if not last_token:
-            raise HttpError(401, "Scanner App not logged in.")
-        elif not token_manager.validate(last_token):
-            raise HttpError(403, "Invalid last_token.")
-    return token_manager.get()
+        raise HttpError(401, "Scanner App not logged in.")
+    return kiosk_token_manager.get()
+
+@router.get("/userToken/")
+async def token_for_student(request, kiosk_token: str):
+    if not kiosk_token_manager.validate(kiosk_token):
+        raise HttpError(403, "Invalid kiosk token")
+    token = str(uuid.uuid4())
+    user_tokens.append(token)
+    print(f"USER_TOKENS: {user_tokens}")
+    return { "token": token }
 
 @router.get("/students/{free_block}/")
 async def fetch_students(request, free_block: FreeBlock):
@@ -99,9 +111,11 @@ async def perms(request: HttpRequest):
 @router.post("/run/")
 async def check_in_student(request, data: CheckInSchema):
     # ip_invalid = request.META.get('HTTP_X_FORWARDED_FOR') not in settings.ALLOWED_CHECK_IN_IPS
-    if not token_manager.validate(data.checkin_token):
+    if data.user_token not in user_tokens:
+        print(f"USER TOKENS: {user_tokens}")
         raise HttpError(403, "IP/Token invalid - retry with /checkin/runTentative/.")
-    student, _ = await check_in_auto(data.email_b64, data.device_id)
+    student, _ = await check_in(data)
+    user_tokens.remove(data.user_token)
     return { "studentName": student.name }
 
 @router.post("/runTentative/")
@@ -111,7 +125,7 @@ async def check_in_student_tentative(
     raw_video: File[UploadedFile]
 ):
     curr_free_block = await get_curr_free_block()
-    student, just_checked_in = await check_in_auto(input_data.email_b64, input_data.device_id)
+    student, just_checked_in = await check_in(input_data)
 
     if just_checked_in:
         raw_video.name = f"{student.name}-{curr_free_block}.webm"
@@ -124,21 +138,21 @@ async def check_in_student_tentative(
 
 @router.post("/runManual/")
 async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchema):
-    if not (await perms(request)).get("manualCheckIn"):
+    if not (await perms(request)).get("teacherMonitored"):
         raise HttpError(401, "Insufficient permissions for manual check-in.")
     client = await oauth_client()
     res = await client.get(f"/users/{data.student_id}")
     email = res.json().get("email")
     if not email:
-        raise HttpError(400, "Invalid Student")
-    student = await Student.objects.filter(email=email).afirst()
-    if student is None:
-        raise HttpError(400, "Invalid Student")
-    free_block = await get_curr_free_block()
-    if not free_block:
-        raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
-    student.checked_in_blocks += free_block
-    await student.asave()
+        raise HttpError(400, "Invalid student ID")
+    student, _ = await check_in(
+        TentativeCheckInSchema(
+            email_b64=b64encode(email.encode()).decode(),
+            device_id="",
+            mode=data.mode
+        ),
+        use_device_id=False
+    )
     return { "studentName": student.name }
 
 @router.post("/adminLogin/")

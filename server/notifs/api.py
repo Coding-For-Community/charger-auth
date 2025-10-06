@@ -32,7 +32,7 @@ def vapid_public_key(request):
 @router.get("/enabled/{email_b64}/")
 async def is_registered(request, email_b64: str):
     student = await get_student(email_b64)
-    data = await SubscriptionData.objects.filter(student=student).afirst()
+    data = await SubscriptionData.objects.aget(student=student).afirst()
     return { "registered": bool(data) }
 
 @router.post("/register/")

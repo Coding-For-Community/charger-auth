@@ -1,7 +1,6 @@
 from django.core.validators import RegexValidator
 from django.db import models
-
-from checkin.core.types import FreeBlock
+from checkin.core.types import FreeBlock, SeniorPrivilegeStatus
 
 def _many_free_blocks():
     return models.CharField(
@@ -26,6 +25,11 @@ class Student(models.Model):
     free_blocks: str = _many_free_blocks()
     checked_in_blocks: str = _many_free_blocks()
     name = models.CharField(max_length=100, default="[Unknown]")
+    sp_status = models.CharField(
+        max_length=2,
+        choices=SeniorPrivilegeStatus.choices,
+        default=SeniorPrivilegeStatus.NOT_AVAILABLE
+    )
 
 class CheckInVideo(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='videos')
@@ -44,7 +48,10 @@ class CheckInRecord(models.Model):
     at the same time. The device ID is uniquely assigned based on fingerprint.js.
     """
     device_id = models.CharField(max_length=400, primary_key=True)
+    # Makes sure that each device can only check in once per block
     free_blocks: str = _many_free_blocks()
+    # Makes sure that only 1 user can check in for senior privileges per block
+    sp_checkin_user = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True)
 
 class FreeBlockToday(models.Model):
     """
@@ -53,5 +60,6 @@ class FreeBlockToday(models.Model):
     block: FreeBlock = _single_free_block()
     time = models.TimeField()
 
-class BackgroundExecutorRequests(models.Model):
+class BgExecutorMsgs(models.Model):
     desire_manual_reset = models.BooleanField(default=False)
+    seniors_grad_year = models.PositiveSmallIntegerField(default=2024)

@@ -6,14 +6,15 @@ from checkin.core.types import FreeBlock
 # Unlike models (which are basically SQL/database representations)
 # Schemas are representations of the JSON that goes in and out of the server.
 
-class CheckInSchema(Schema):
-    email_b64: str
-    checkin_token: str
-    device_id: str
+FreePeriodOption = Literal["free_period", "sp_check_in", "sp_check_out"] | None
 
 class TentativeCheckInSchema(Schema):
     email_b64: str
     device_id: str
+    mode: FreePeriodOption = None
+
+class CheckInSchema(TentativeCheckInSchema):
+    user_token: str
 
 class CustomFreeBlockSchema(Schema):
     label: FreeBlock
@@ -25,3 +26,4 @@ class AdminLoginSchema(Schema):
 
 class ManualCheckInSchema(Schema):
     student_id: int
+    mode: FreePeriodOption = None

@@ -6,10 +6,14 @@ from datetime import datetime
 from ninja.errors import HttpError
 
 from checkin.core.get_now import get_now
-from checkin.core.types import FreeBlock
+from checkin.core.types import FreeBlock, SeniorPrivilegeStatus
 from checkin.models import FreeBlockToday, Student, CheckInRecord
+from checkin.schema import TentativeCheckInSchema
 
 logger = logging.getLogger(__name__)
+
+async def _do_nothing():
+    return None
 
 async def get_curr_free_block() -> FreeBlock | None:
     now = get_now()
@@ -24,26 +28,55 @@ def get_student(email_b64: str):
     logger.info(f"Email: {email}")
     return Student.objects.filter(email=email).afirst()
 
-async def check_in_auto(email_b64: str, device_id: str):
-    free_block = await get_curr_free_block()
-    if not free_block:
-        raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
-    student, checkin_record = await asyncio.gather(
-        get_student(email_b64),
-        CheckInRecord.objects.filter(device_id=device_id).afirst()
+async def check_in(data: TentativeCheckInSchema, use_device_id=True):
+    free_block, student, checkin_record = await asyncio.gather(
+        get_curr_free_block(),
+        get_student(data.email_b64),
+        CheckInRecord.objects.filter(device_id=data.device_id).afirst()
+        if use_device_id else _do_nothing(),
     )
+
     if not student:
         raise HttpError(400, "Invalid Student")
-    if checkin_record:
-        if free_block in checkin_record.free_blocks:
-            raise HttpError(409, "This device has already checked in from another student's account.")
-        else:
-            checkin_record.free_blocks += free_block
-            await checkin_record.asave()
-    else:
-        await CheckInRecord(device_id=device_id).asave()
-    checked_in = free_block not in student.checked_in_blocks
-    if checked_in:
-        student.checked_in_blocks += free_block
-        await student.asave()
-    return student, checked_in
+    if student.sp_status != SeniorPrivilegeStatus.NOT_AVAILABLE and data.mode is None:
+        raise HttpError(414, "Since this student is a senior, the mode must be specified.")
+    if not checkin_record and use_device_id: # Manual creation because we don't want to create a record if a 414 or 400 is thrown
+        await CheckInRecord(device_id=data.device_id, free_blocks=free_block).asave()
+
+    match data.mode:
+        case "free_period" | None:
+            if not free_block:
+                raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
+            if checkin_record:
+                if free_block in checkin_record.free_blocks:
+                    raise HttpError(409, "This device has already checked in from another student's account.")
+                else:
+                    checkin_record.free_blocks += free_block
+                    await checkin_record.asave()
+            checked_in = free_block not in student.checked_in_blocks
+            if checked_in:
+                student.checked_in_blocks += free_block
+                await student.asave()
+            return student, checked_in
+
+        case "sp_check_out":
+            if student.sp_status == SeniorPrivilegeStatus.NOT_AVAILABLE:
+                raise HttpError(400, "Invalid Student")
+            if checkin_record:
+                prev_user = checkin_record.sp_checkin_user
+                if prev_user and prev_user.email != b64decode(data.email_b64).decode('utf-8'):
+                    raise HttpError(409, "This device has already checked in from another student's account.")
+                else:
+                    checkin_record.sp_checkin_user = student
+                    await checkin_record.asave()
+            student.sp_status = SeniorPrivilegeStatus.CHECKED_OUT
+            return student, True
+
+        case "sp_check_in":
+            if student.sp_status != SeniorPrivilegeStatus.CHECKED_OUT:
+                raise HttpError(416, "Senior has not checked in yet.")
+            student.sp_status = SeniorPrivilegeStatus.CHECKED_IN
+            return student, True
+
+        case _:
+            raise Exception(f"Invalid mode {data.mode}.")

@@ -7,7 +7,7 @@ from django.core.management import BaseCommand
 from pywebpush import webpush, WebPushException
 from checkin.core.get_now import get_now
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
-from checkin.models import Student, FreeBlockToday, CheckInRecord, BackgroundExecutorRequests, CheckInVideo
+from checkin.models import Student, FreeBlockToday, CheckInRecord, BgExecutorMsgs, CheckInVideo
 from datetime import datetime, time
 from dotenv import load_dotenv
 from notifs.models import SubscriptionData
@@ -48,7 +48,7 @@ class Command(BaseCommand):
             schedule.run_pending()
             _, bg_reqs = await asyncio.gather(
                 asyncio.sleep(1),
-                BackgroundExecutorRequests.objects.afirst()
+                BgExecutorMsgs.objects.afirst()
             )
             if bg_reqs and bg_reqs.desire_manual_reset and self.reset_count < 3:
                 logger.info("Manual reset requested.")
