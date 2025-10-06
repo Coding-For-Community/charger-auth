@@ -1,11 +1,11 @@
-import { Center, Loader, Stack, Text } from "@mantine/core";
+import { Button, Center, Loader, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
+import { createLazyFileRoute } from "@tanstack/react-router";
+import { lazy, useState } from "react";
 import { fetchBackend } from "../api/fetchBackend";
 import { useAdminLoginRedirect } from "../api/perms";
 
-export const Route = createFileRoute("/KioskPage")({
+export const Route = createLazyFileRoute("/KioskPage")({
   component: KioskPage
 })
 
@@ -15,11 +15,12 @@ const QRCodeSVG = lazy(
 ))
 
 function KioskPage() {
+  const [modalOpen, setModalOpen] = useState(false)
   const perms = useAdminLoginRedirect() 
   const tokenQ = useQuery({
     queryKey: ["qrCodeToken"],
     queryFn: async () => {
-      const res = await fetchBackend("/checkin/token/", { credentials: "include" })
+      const res = await fetchBackend("/checkin/kioskToken/", { credentials: "include" })
       return (await res.json())
     },
     refetchInterval: (query) => {
@@ -48,17 +49,17 @@ function KioskPage() {
   return (
     <>
       {
-        perms.data?.isAdmin &&
-        <ManualCheckInModal perms={perms.data} />
+        perms.data?.teacherMonitored &&
+        <ManualCheckInModal open={modalOpen} setOpen={setModalOpen} />
       }
       <Stack align="center" justify="center" h="100vh" gap={0}>
-        <Text fz={30} fw="bold" mb={8} gradient={{ from: "blue", to: "cyan", deg: 90 }}>
+        <Text fz={30} fw="bold" mb={5}>
           {freeBlockQ.data
             ? "Scan the QR code to check in!"
             : "You can't check in right now."
           }
         </Text>
-        <Text size="lg" c="dimmed" ta="center" mb={20}>
+        <Text size="lg" c="dimmed" ta="center" mt={0} mb={30}>
           {
             freeBlockQ.data &&
             `Current Free Period: ${freeBlockQ.data} Block`
@@ -66,10 +67,19 @@ function KioskPage() {
         </Text>
         <QRCodeSVG 
           value={
-            `https://coding-for-community.github.io/charger-auth/#/CheckInPage?lastToken=${tokenQ.data["token"]}`
+            `https://coding-for-community.github.io/charger-auth/#/CheckInPage?kioskToken=${tokenQ.data["token"]}`
           } 
-          size={350}
+          size={550}
         />
+        <Button 
+          bg="red" 
+          size="xl"
+          display={perms.data?.teacherMonitored ? "block" : "none"}
+          my={30}
+          onClick={() => setModalOpen(true)}
+        >
+          Don't have a phone?
+        </Button>
       </Stack>
     </>
   )

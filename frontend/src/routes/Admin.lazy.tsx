@@ -1,12 +1,12 @@
 import { ActionIcon, AppShell, Button, Checkbox, CloseButton, Divider, Group, Loader, Paper, rem, ScrollArea, Select, Text, TextInput, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createLazyFileRoute } from '@tanstack/react-router';
 import { lazy, useState } from 'react';
 import { fetchBackend } from '../api/fetchBackend.ts';
 import { useAdminLoginRedirect } from '../api/perms.ts';
 import { IconReload, IconSettings2 } from '../components/icons.tsx';
 
-export const Route = createFileRoute('/Admin')({
+export const Route = createLazyFileRoute('/Admin')({
   component: Admin,
 })
 

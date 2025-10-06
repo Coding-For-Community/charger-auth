@@ -8,23 +8,31 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginPageRouteImport } from './routes/LoginPage'
-import { Route as KioskPageRouteImport } from './routes/KioskPage'
 import { Route as HomePageRouteImport } from './routes/HomePage'
 import { Route as CheckInPageRouteImport } from './routes/CheckInPage'
 import { Route as AdminLoginRouteImport } from './routes/AdminLogin'
-import { Route as AdminRouteImport } from './routes/Admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const KioskPageLazyRouteImport = createFileRoute('/KioskPage')()
+const AdminLazyRouteImport = createFileRoute('/Admin')()
+
+const KioskPageLazyRoute = KioskPageLazyRouteImport.update({
+  id: '/KioskPage',
+  path: '/KioskPage',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/KioskPage.lazy').then((d) => d.Route))
+const AdminLazyRoute = AdminLazyRouteImport.update({
+  id: '/Admin',
+  path: '/Admin',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/Admin.lazy').then((d) => d.Route))
 const LoginPageRoute = LoginPageRouteImport.update({
   id: '/LoginPage',
   path: '/LoginPage',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KioskPageRoute = KioskPageRouteImport.update({
-  id: '/KioskPage',
-  path: '/KioskPage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HomePageRoute = HomePageRouteImport.update({
@@ -42,11 +50,6 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/AdminLogin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/Admin',
-  path: '/Admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,86 +58,93 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
   '/CheckInPage': typeof CheckInPageRoute
   '/HomePage': typeof HomePageRoute
-  '/KioskPage': typeof KioskPageRoute
   '/LoginPage': typeof LoginPageRoute
+  '/Admin': typeof AdminLazyRoute
+  '/KioskPage': typeof KioskPageLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
   '/CheckInPage': typeof CheckInPageRoute
   '/HomePage': typeof HomePageRoute
-  '/KioskPage': typeof KioskPageRoute
   '/LoginPage': typeof LoginPageRoute
+  '/Admin': typeof AdminLazyRoute
+  '/KioskPage': typeof KioskPageLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/Admin': typeof AdminRoute
   '/AdminLogin': typeof AdminLoginRoute
   '/CheckInPage': typeof CheckInPageRoute
   '/HomePage': typeof HomePageRoute
-  '/KioskPage': typeof KioskPageRoute
   '/LoginPage': typeof LoginPageRoute
+  '/Admin': typeof AdminLazyRoute
+  '/KioskPage': typeof KioskPageLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/Admin'
     | '/AdminLogin'
     | '/CheckInPage'
     | '/HomePage'
-    | '/KioskPage'
     | '/LoginPage'
+    | '/Admin'
+    | '/KioskPage'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/Admin'
     | '/AdminLogin'
     | '/CheckInPage'
     | '/HomePage'
-    | '/KioskPage'
     | '/LoginPage'
+    | '/Admin'
+    | '/KioskPage'
   id:
     | '__root__'
     | '/'
-    | '/Admin'
     | '/AdminLogin'
     | '/CheckInPage'
     | '/HomePage'
-    | '/KioskPage'
     | '/LoginPage'
+    | '/Admin'
+    | '/KioskPage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
   AdminLoginRoute: typeof AdminLoginRoute
   CheckInPageRoute: typeof CheckInPageRoute
   HomePageRoute: typeof HomePageRoute
-  KioskPageRoute: typeof KioskPageRoute
   LoginPageRoute: typeof LoginPageRoute
+  AdminLazyRoute: typeof AdminLazyRoute
+  KioskPageLazyRoute: typeof KioskPageLazyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/KioskPage': {
+      id: '/KioskPage'
+      path: '/KioskPage'
+      fullPath: '/KioskPage'
+      preLoaderRoute: typeof KioskPageLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Admin': {
+      id: '/Admin'
+      path: '/Admin'
+      fullPath: '/Admin'
+      preLoaderRoute: typeof AdminLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/LoginPage': {
       id: '/LoginPage'
       path: '/LoginPage'
       fullPath: '/LoginPage'
       preLoaderRoute: typeof LoginPageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/KioskPage': {
-      id: '/KioskPage'
-      path: '/KioskPage'
-      fullPath: '/KioskPage'
-      preLoaderRoute: typeof KioskPageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/HomePage': {
@@ -158,13 +168,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/Admin': {
-      id: '/Admin'
-      path: '/Admin'
-      fullPath: '/Admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -177,12 +180,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
   AdminLoginRoute: AdminLoginRoute,
   CheckInPageRoute: CheckInPageRoute,
   HomePageRoute: HomePageRoute,
-  KioskPageRoute: KioskPageRoute,
   LoginPageRoute: LoginPageRoute,
+  AdminLazyRoute: AdminLazyRoute,
+  KioskPageLazyRoute: KioskPageLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

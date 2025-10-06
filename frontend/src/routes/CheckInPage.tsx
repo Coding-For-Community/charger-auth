@@ -1,46 +1,48 @@
 import { Loader, Stack, Text, Title } from "@mantine/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, useEffect, useState } from "react";
-import { attemptCheckIn as checkIn, useCheckinTokenQ, useFingerprintQ, type CheckInResult } from '../api/checkIn.ts';
+import { checkIn, useFingerprint, useUserToken, type CheckInResult } from '../api/checkIn.ts';
 import { useB64EmailRedirect } from "../api/perms.ts";
 import { IconAlertTriangle, IconCheck } from "../components/icons.tsx";
 
 export const Route = createFileRoute("/CheckInPage")({
   component: CheckInPage,
   validateSearch: (search: Record<string, unknown>) => ({
-    lastToken: (search.lastToken as string)
+    kioskToken: (search.kioskToken as string)
   }),
 })
 
 const SnapEvidence = lazy(() => import(`../components/SnapEvidence.tsx`))
+const ModeSelect = lazy(() => import(`../components/ModeSelect.tsx`))
 
 function CheckInPage() {
   const [status, setStatus] = useState<CheckInResult>({ status: "loading" })
-  const [triedVideoCheckIn, setTriedVideoCheckIn] = useState(false)
+  const [initialLoad, setInitialLoad] = useState(false)
+  const [evidenceTaken, setEvidenceTaken] = useState(false)
   const { emailB64 } = useB64EmailRedirect()
-  const { lastToken } = Route.useSearch()
-  const tokenQ = useCheckinTokenQ(lastToken)
-  const fingerprintQ = useFingerprintQ()
+  const { kioskToken } = Route.useSearch()
+  const userTokenQ = useUserToken(kioskToken)
+  const fingerprintQ = useFingerprint()
 
   useEffect(() => {
     if (
-      tokenQ.data && fingerprintQ.data && 
-      tokenQ.data != 0 && status.status !== "ok"
+      !initialLoad && fingerprintQ.data && 
+      userTokenQ.data && userTokenQ.data !== 0
     ) {
-      checkIn(emailB64, fingerprintQ.data, tokenQ.data["token"]).then(setStatus)
+      setInitialLoad(true)
+      checkIn(emailB64, fingerprintQ.data, userTokenQ.data)
+        .then(setStatus)
     }
-  }, [tokenQ.data, fingerprintQ.data])
+  }, [fingerprintQ.data, userTokenQ.data, initialLoad])
 
-  if (tokenQ.data == 0 && !triedVideoCheckIn && status.status !== "ok") {
+  if (userTokenQ.data === 0 && !evidenceTaken) {
     return (
       <SnapEvidence
-        title=""
-        subtitle=""
-        onSend={async (file) => {
-          console.log("Got here?")
+        onSend={(file) => {
+          setEvidenceTaken(true)
           setStatus({ status: "loading" })
-          setTriedVideoCheckIn(true)
-          checkIn(emailB64, fingerprintQ.data!, undefined, file).then(setStatus)
+          checkIn(emailB64, fingerprintQ.data!, undefined, file)
+            .then(setStatus)
         }}
       />
     )
@@ -93,6 +95,16 @@ function CheckInPage() {
         </>
       )
       break
+    case "modeNeeded":
+      return (
+        <ModeSelect 
+          onSelect={(mode) => {
+            setStatus({ status: "loading" })
+            checkIn(emailB64, fingerprintQ.data!, userTokenQ.data!, undefined, mode)
+              .then(setStatus)
+          }} 
+        />
+      )
   }
 
   return (
