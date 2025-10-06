@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from base64 import b64decode
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ninja.errors import HttpError
 
@@ -18,10 +18,24 @@ async def _do_nothing():
 async def get_curr_free_block() -> FreeBlock | None:
     now = get_now()
     async for item in FreeBlockToday.objects.all():
-        delta_time_secs = (datetime.combine(now.date(), item.time) - now).total_seconds()
-        if -600 <= delta_time_secs <= 600:
+        delta_secs = (datetime.combine(now.date(), item.time) - now).total_seconds()
+        if -600 <= delta_secs <= 600:
             return item.block
     return None
+
+async def get_next_free_block() -> (FreeBlock | None, float):
+    now = get_now()
+    async for item in FreeBlockToday.objects.all():
+        delta_secs = (datetime.combine(now.date(), item.time) - now).total_seconds()
+        if delta_secs < -600:
+            return item.block, abs(delta_secs)
+    # If we're done for free blocks for today, re-send a request at tomorrow 8:30
+    tomorrow_830 = now.replace(hour=8, minute=30, second=0)
+    delta_secs = (tomorrow_830 - now).total_seconds()
+    while delta_secs < 0:
+        now += timedelta(days=1)
+        delta_secs = (tomorrow_830 - now).total_seconds()
+    return None, delta_secs
 
 def get_student(email_b64: str):
     email = b64decode(email_b64).decode('utf-8')

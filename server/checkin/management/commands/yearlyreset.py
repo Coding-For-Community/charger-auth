@@ -49,7 +49,7 @@ async def reset():
     from oauth.api import oauth_client
     client = await oauth_client()
 
-    seniors_grad_year = (await BgExecutorMsgs.objects.afirst()).seniors_grad_year
+    seniors_grad_year = (await BgExecutorMsgs.aget()).seniors_grad_year
     res = await client.get(f"/users?roles=4180&grad_year={seniors_grad_year}")
     senior_emails = [data.get("email") for data in res.json()["value"] if data.get("email")]
     async for student in Student.objects.all():

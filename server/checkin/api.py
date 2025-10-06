@@ -1,47 +1,57 @@
 """
 Stores the main free period check-in endpoints.
 """
+import asyncio
 import logging
 import uuid
-from base64 import b64encode
-
 import ninja
+
 from asgiref.sync import sync_to_async
-
-from django.contrib.auth import aauthenticate, alogin
-from django.http import HttpRequest, FileResponse
-from ninja import UploadedFile, Form, File
-from ninja.errors import HttpError
-
-from checkin.core.api_methods import get_curr_free_block, get_student, check_in
+from base64 import b64encode
+from checkin.core.api_methods import get_curr_free_block, get_student, check_in, get_next_free_block
 from checkin.core.compress_video import compress_video
 from checkin.core.random_token_manager import RandomTokenManager
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
-from checkin.models import Student, CheckInVideo
+from checkin.models import Student, CheckInVideo, BgExecutorMsgs
 from checkin.schema import CheckInSchema, AdminLoginSchema, ManualCheckInSchema, TentativeCheckInSchema
-from config import settings
+from django.contrib.auth import aauthenticate, alogin
+from django.http import HttpRequest, FileResponse
+from ninja import UploadedFile, File
+from ninja.errors import HttpError
+from ninja.throttling import AuthRateThrottle
 from oauth.api import oauth_client
 
 router = ninja.Router()
-kiosk_token_manager = RandomTokenManager(interval_secs=5)
-print("Hi!")
-user_tokens = []
 
+kiosk_token_manager = RandomTokenManager(interval_secs=5)
+user_tokens = []
+user_tokens_lock = asyncio.Lock()
 logger = logging.getLogger(__name__)
 
 @router.get("/kioskToken/")
 async def token_for_kiosk(request: HttpRequest):
-    if not (await perms(request)).get("isAdmin"):
+    curr_perms, curr_free_block = await asyncio.gather(
+        perms(request),
+        get_curr_free_block()
+    )
+    if not curr_perms.get("isAdmin"):
         raise HttpError(401, "Scanner App not logged in.")
-    return kiosk_token_manager.get()
+    token = kiosk_token_manager.get()
+    token["curr_free_block"] = curr_free_block
+    if curr_free_block is None:
+        _, delta_time = await get_next_free_block()
+        token["token"] = None
+        token["time_until_refresh"] = delta_time + 5
+        logger.warning(f"Free periods done! Next refresh in: {delta_time} secs")
+    return token
 
 @router.get("/userToken/")
 async def token_for_student(request, kiosk_token: str):
     if not kiosk_token_manager.validate(kiosk_token):
         raise HttpError(403, "Invalid kiosk token")
     token = str(uuid.uuid4())
-    user_tokens.append(token)
-    print(f"USER_TOKENS: {user_tokens}")
+    async with user_tokens_lock:
+        user_tokens.append(token)
     return { "token": token }
 
 @router.get("/students/{free_block}/")
@@ -74,12 +84,6 @@ async def student_vid(request, free_block: FreeBlock, email_b64: str):
     if not vid:
         raise HttpError(402, "No Video found")
     return FileResponse(vid.file.open(), as_attachment=True, filename=vid.file.name)
-
-@router.get("/freeBlockNow/")
-async def free_block_now(request):
-    return {
-        "curr_free_block": await get_curr_free_block()
-    }
 
 @router.get("/freeBlockNow/{email_b64}/")
 async def free_block_now_specific(request, email_b64: str):
@@ -115,7 +119,8 @@ async def check_in_student(request, data: CheckInSchema):
         print(f"USER TOKENS: {user_tokens}")
         raise HttpError(403, "IP/Token invalid - retry with /checkin/runTentative/.")
     student, _ = await check_in(data)
-    user_tokens.remove(data.user_token)
+    async with user_tokens_lock:
+        user_tokens.remove(data.user_token)
     return { "studentName": student.name }
 
 @router.post("/runTentative/")
@@ -166,7 +171,18 @@ async def admin_login(request: HttpRequest, data: AdminLoginSchema):
     logger.info("Admin login success.")
     return { "success": True }
 
-if settings.DEBUG:
-    @router.delete("/clear/")
-    async def reset_data_debug(request):
-        await Student.objects.all().adelete()
+@router.post("/forceReset/", throttle=AuthRateThrottle("2/m"))
+async def force_reset(request: HttpRequest):
+    msgs = await BgExecutorMsgs.aget()
+    msgs.desire_manual_reset = True
+    await msgs.asave()
+    return { "success": True }
+
+@router.post("/setSeniorYear/{year}/")
+async def set_senior_year(request, year: int):
+    if not (await perms(request)).get("isAdmin"):
+        raise HttpError(401, "Scanner App not logged in.")
+    msgs = await BgExecutorMsgs.aget()
+    msgs.seniors_grad_year = year
+    await msgs.asave()
+    return { "success": True }

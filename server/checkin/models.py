@@ -1,5 +1,8 @@
+from asgiref.sync import sync_to_async
 from django.core.validators import RegexValidator
 from django.db import models
+from solo.models import SingletonModel
+
 from checkin.core.types import FreeBlock, SeniorPrivilegeStatus
 
 def _many_free_blocks():
@@ -60,6 +63,10 @@ class FreeBlockToday(models.Model):
     block: FreeBlock = _single_free_block()
     time = models.TimeField()
 
-class BgExecutorMsgs(models.Model):
+class BgExecutorMsgs(SingletonModel):
     desire_manual_reset = models.BooleanField(default=False)
     seniors_grad_year = models.PositiveSmallIntegerField(default=2024)
+
+    @classmethod
+    async def aget(cls):
+        return await sync_to_async(cls.get_solo)()

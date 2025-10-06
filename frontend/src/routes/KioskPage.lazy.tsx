@@ -25,24 +25,30 @@ function KioskPage() {
     },
     refetchInterval: (query) => {
       if (!query.state.data) return 1000
-      return 1000 * query.state.data["time_until_refresh"]
+      const secs = query.state.data["time_until_refresh"]
+      return 1000 * secs
     },
     refetchOnMount: "always"
   })
-  const freeBlockQ = useQuery({
-    queryKey: ["currFreeBlock"],
-    queryFn: async () => {
-      const res = await fetchBackend("/checkin/freeBlockNow/")
-      return (await res.json())["curr_free_block"]
-    }
-  })
 
-  if (freeBlockQ.isFetching || tokenQ.isLoading) {
+  if (tokenQ.isLoading) {
     return (
       <Center style={{ minHeight: "100vh" }}>
         <Loader size="xl" />
         <Text ml="md" size="lg">Loading authentication and block info...</Text>
       </Center>
+    )
+  }
+
+  const currFreeBlock: string | null = tokenQ.data["curr_free_block"]
+
+  if (!currFreeBlock) {
+    return (
+      <Stack align="center" justify="center" h="100vh" gap={0}>
+        <Text fz={30} fw="bold" mb={5}>
+          No free period is currently available.
+        </Text>
+      </Stack>
     )
   }
 
@@ -54,28 +60,23 @@ function KioskPage() {
       }
       <Stack align="center" justify="center" h="100vh" gap={0}>
         <Text fz={30} fw="bold" mb={5}>
-          {freeBlockQ.data
-            ? "Scan the QR code to check in!"
-            : "You can't check in right now."
-          }
+          Scan the QR code to check in!
         </Text>
         <Text size="lg" c="dimmed" ta="center" mt={0} mb={30}>
-          {
-            freeBlockQ.data &&
-            `Current Free Period: ${freeBlockQ.data} Block`
-          }
+          Current Free Period: {currFreeBlock} Block
         </Text>
         <QRCodeSVG 
           value={
             `https://coding-for-community.github.io/charger-auth/#/CheckInPage?kioskToken=${tokenQ.data["token"]}`
           } 
           size={550}
+          style={{ marginBottom: 30 }}
         />
         <Button 
           bg="red" 
           size="xl"
           display={perms.data?.teacherMonitored ? "block" : "none"}
-          my={30}
+          mb={30}
           onClick={() => setModalOpen(true)}
         >
           Don't have a phone?

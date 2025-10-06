@@ -48,7 +48,7 @@ class Command(BaseCommand):
             schedule.run_pending()
             _, bg_reqs = await asyncio.gather(
                 asyncio.sleep(1),
-                BgExecutorMsgs.objects.afirst()
+                BgExecutorMsgs.aget()
             )
             if bg_reqs and bg_reqs.desire_manual_reset and self.reset_count < 3:
                 logger.info("Manual reset requested.")
@@ -71,13 +71,14 @@ class Command(BaseCommand):
             update_args = {"free_blocks": ""}
         # Fetch data and reset Students objects
         today_as_str = get_now().strftime("%m-%d-%Y")
-        rosters_res, calendar_res, _ = await asyncio.gather(
+        rosters_res, calendar_res, _, _ = await asyncio.gather(
             client.get("/academics/rosters"),
             client.get(
                 f"/academics/schedules/master?"
                 f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
             ),
             Student.objects.all().aupdate(**update_args),
+            CheckInRecord.objects.all().adelete()
         )
         if rosters_res.status_code != 200:
             raise Exception("Roster data did not initialize. Err: \n" + rosters_res.text)
@@ -112,7 +113,6 @@ class Command(BaseCommand):
             tasks.extend(self._save_student(user, maybe_free_block) for user in course["roster"])
         await asyncio.gather(*tasks)
         logger.info(f"Num free block courses: {num_free_block_courses}")
-        await CheckInRecord.objects.all().adelete()
 
     async def _save_student(self, user: dict, maybe_free_block: FreeBlock | None = None):
         if user["leader"].get("type") == "Teacher":
