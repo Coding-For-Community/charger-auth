@@ -11,7 +11,7 @@ from base64 import b64encode
 from checkin.core.api_methods import get_curr_free_block, get_student, check_in, get_next_free_block
 from checkin.core.compress_video import compress_video
 from checkin.core.random_token_manager import RandomTokenManager
-from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
+from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock, SeniorPrivilegeStatus, SP_MODE
 from checkin.models import Student, CheckInVideo, BgExecutorMsgs
 from checkin.schema import CheckInSchema, AdminLoginSchema, ManualCheckInSchema, TentativeCheckInSchema
 from django.contrib.auth import aauthenticate, alogin
@@ -54,6 +54,10 @@ async def token_for_student(request, kiosk_token: str):
         user_tokens.append(token)
     return { "token": token }
 
+@router.get("/seniorYear/")
+async def senior_year(request):
+    return (await BgExecutorMsgs.aget()).seniors_grad_year
+
 @router.get("/students/{free_block}/")
 async def fetch_students(request, free_block: FreeBlock):
     if free_block not in ALL_FREE_BLOCKS:
@@ -64,14 +68,35 @@ async def fetch_students(request, free_block: FreeBlock):
         if free_block not in student.free_blocks:
             continue
         if free_block in student.checked_in_blocks:
-            has_vid = await student.videos.filter(block=free_block).afirst()
-            checked_in = "tentative" if has_vid else "yes"
+            has_vid = await student.videos.filter(is_for=free_block).afirst()
+            status = "tentative" if has_vid else "checked_in"
         else:
-            checked_in = "no"
+            status = "nothing"
         output.append({
             "name": student.name,
-            "checked_in": checked_in,
+            "status": status,
             "email": student.email
+        })
+    return output
+
+@router.get("/spStudents/")
+async def fetch_sp_students(request):
+    output = []
+    students = Student.objects.all()
+    async for student in students:
+        if student.sp_status == SeniorPrivilegeStatus.NOT_AVAILABLE:
+            continue
+        vid = await student.videos.filter(is_for=SP_MODE).afirst()
+        if student.sp_status == SeniorPrivilegeStatus.CHECKED_OUT:
+            status = "tentative" if vid else "checked_out"
+        elif vid and student.sp_status == SeniorPrivilegeStatus.AVAILABLE:
+            status = "tentative_in"
+        else:
+            continue
+        output.append({
+            "name": student.name,
+            "email": student.email,
+            "status": status
         })
     return output
 
@@ -80,7 +105,7 @@ async def student_vid(request, free_block: FreeBlock, email_b64: str):
     student = await get_student(email_b64)
     if not student:
         raise HttpError(400, "Invalid Student")
-    vid = await student.videos.filter(block=free_block).afirst()
+    vid = await student.videos.filter(is_for=free_block).afirst()
     if not vid:
         raise HttpError(402, "No Video found")
     return FileResponse(vid.file.open(), as_attachment=True, filename=vid.file.name)
@@ -114,8 +139,7 @@ async def perms(request: HttpRequest):
 
 @router.post("/run/")
 async def check_in_student(request, data: CheckInSchema):
-    # ip_invalid = request.META.get('HTTP_X_FORWARDED_FOR') not in settings.ALLOWED_CHECK_IN_IPS
-    if data.user_token not in user_tokens:
+    if data.mode != "sp_check_in" and data.user_token not in user_tokens:
         print(f"USER TOKENS: {user_tokens}")
         raise HttpError(403, "IP/Token invalid - retry with /checkin/runTentative/.")
     student, _ = await check_in(data)
@@ -129,13 +153,13 @@ async def check_in_student_tentative(
     input_data: TentativeCheckInSchema,
     raw_video: File[UploadedFile]
 ):
-    curr_free_block = await get_curr_free_block()
     student, just_checked_in = await check_in(input_data)
+    is_for = (await get_curr_free_block()) if input_data.mode == "free_period" else SP_MODE
 
     if just_checked_in:
-        raw_video.name = f"{student.name}-{curr_free_block}.webm"
+        raw_video.name = f"{student.name}-{is_for}.webm"
         with compress_video(raw_video) as video_file:
-            vid_obj = CheckInVideo(student=student, block=curr_free_block)
+            vid_obj = CheckInVideo(student=student, is_for=is_for)
             await sync_to_async(vid_obj.file.save)(video_file.name, video_file)
             await vid_obj.asave()
 
@@ -173,16 +197,9 @@ async def admin_login(request: HttpRequest, data: AdminLoginSchema):
 
 @router.post("/forceReset/", throttle=AuthRateThrottle("2/m"))
 async def force_reset(request: HttpRequest):
-    msgs = await BgExecutorMsgs.aget()
-    msgs.desire_manual_reset = True
-    await msgs.asave()
-    return { "success": True }
-
-@router.post("/setSeniorYear/{year}/")
-async def set_senior_year(request, year: int):
     if not (await perms(request)).get("isAdmin"):
         raise HttpError(401, "Scanner App not logged in.")
     msgs = await BgExecutorMsgs.aget()
-    msgs.seniors_grad_year = year
+    msgs.desire_manual_reset = True
     await msgs.asave()
     return { "success": True }

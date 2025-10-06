@@ -8,4 +8,6 @@ class SeniorPrivilegeStatus(models.TextChoices):
     NOT_AVAILABLE = 'na'
     AVAILABLE = 'ia'
     CHECKED_OUT = 'co'
-    CHECKED_IN = 'ci'
+
+# Senior Privileges check-in mode string
+SP_MODE = "SP"

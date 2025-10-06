@@ -1,3 +1,5 @@
+from typing import Literal
+
 from asgiref.sync import sync_to_async
 from django.core.validators import RegexValidator
 from django.db import models
@@ -36,13 +38,18 @@ class Student(models.Model):
 
 class CheckInVideo(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='videos')
-    block: FreeBlock = _single_free_block()
+    # 'SP' stands for senior privileges
+    is_for: FreeBlock | Literal['SP'] = models.CharField(
+        max_length=2,
+        validators=[RegexValidator("^([A-G]|SP)$")],
+        primary_key=True
+    )
     file = models.FileField(upload_to='checkin_vids/')
 
     class Meta:
-        # Each student can only have 1 checkin video per block
+        # Each student can only have 1 checkin video per block and 1 video for senior privileges
         constraints = [
-            models.UniqueConstraint(fields=['student', 'block'], name='unique_checkin_vid')
+            models.UniqueConstraint(fields=['student', 'is_for'], name='unique_checkin_vid')
         ]
 
 class CheckInRecord(models.Model):
@@ -60,12 +67,16 @@ class FreeBlockToday(models.Model):
     """
     Represents the time of a free block today.
     """
-    block: FreeBlock = _single_free_block()
+    block: FreeBlock = models.CharField(
+        max_length=1,
+        validators=[RegexValidator("[A-G]")],
+        primary_key=True
+    )
     time = models.TimeField()
 
 class BgExecutorMsgs(SingletonModel):
     desire_manual_reset = models.BooleanField(default=False)
-    seniors_grad_year = models.PositiveSmallIntegerField(default=2024)
+    seniors_grad_year = models.PositiveSmallIntegerField(default=2026)
 
     @classmethod
     async def aget(cls):

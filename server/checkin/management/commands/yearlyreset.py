@@ -38,19 +38,19 @@ class Command(BaseCommand):
         asyncio.run(main(options["month"], options["day"]))
 
 async def main(month: str, day: str):
-    await reset()
+    await __reset()
     while True:
         now = datetime.now()
         if now.month == int(month) and now.day == int(day) and now.hour == 6:
-            await reset()
+            await __reset(increment_year=True)
         await asyncio.sleep(60 * 60)
 
-async def reset():
+async def __reset(increment_year=False):
     from oauth.api import oauth_client
     client = await oauth_client()
 
-    seniors_grad_year = (await BgExecutorMsgs.aget()).seniors_grad_year
-    res = await client.get(f"/users?roles=4180&grad_year={seniors_grad_year}")
+    msgs = await BgExecutorMsgs.aget()
+    res = await client.get(f"/users?roles=4180&grad_year={msgs.seniors_grad_year}")
     senior_emails = [data.get("email") for data in res.json()["value"] if data.get("email")]
     async for student in Student.objects.all():
         is_senior = student.email in senior_emails
@@ -60,3 +60,6 @@ async def reset():
             await student.asave()
         elif not is_senior and has_privilege:
             await student.adelete()
+    if increment_year:
+        msgs.seniors_grad_year += 1
+        await msgs.asave()

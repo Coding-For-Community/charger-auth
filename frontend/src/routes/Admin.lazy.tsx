@@ -1,4 +1,4 @@
-import { ActionIcon, AppShell, Button, Checkbox, CloseButton, Divider, Group, Loader, Paper, rem, ScrollArea, Select, Text, TextInput, Title } from '@mantine/core';
+import { ActionIcon, AppShell, Button, Checkbox, CloseButton, Divider, Group, Loader, Paper, rem, ScrollArea, Select, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { createLazyFileRoute } from '@tanstack/react-router';
 import { lazy, useState } from 'react';
@@ -11,13 +11,14 @@ export const Route = createLazyFileRoute('/Admin')({
 })
 
 const VideoPlayer = lazy(() => import("../components/EvidencePlayer.tsx"))
+const SP_MODE = "Senior Privileges"
 
 function Admin() {
   const loggedIn = useAdminLoginRedirect();
   
   const [vidsOpened, setVidsOpened] = useState(false)
   const [navbarCollapsedMobile, setNavbarCollapsedMobile] = useState(true)
-  const [block, setBlock] = useState("A");
+  const [mode, setMode] = useState("A");
   const [searchQ, setSearchQ] = useState("");
   const [checkedItems, setCheckedItems] = useState(() => {
     const txt = window.localStorage.getItem("checkedItems");
@@ -25,16 +26,25 @@ function Admin() {
   });
 
   const studentsQ = useQuery({
-    queryKey: ["students", block],
+    queryKey: ["students", mode],
     queryFn: async () => {
-      const res = await fetchBackend(`/checkin/students/${block}`);
+      const res = 
+        mode === SP_MODE
+          ? await fetchBackend("/checkin/spStudents/")
+          : await fetchBackend(`/checkin/students/${mode}`);
       return (await res.json()) as any[];
     }
+  })
+  const seniorYearQ = useQuery({
+    queryKey: ["seniorYear"],
+    queryFn: async () => await (await fetchBackend("/checkin/seniorYear/")).text(),
+    staleTime: Infinity
   })
 
   function checked(name: string) {
     return checkedItems.includes(name)
   }
+
   function setChecked(checked: boolean, name: string) {
     setCheckedItems(prevValue => {
       let newItems = prevValue;
@@ -47,10 +57,20 @@ function Admin() {
       return newItems;
     })
   }
-  function isSearched(student: any) {
+
+  function searched(student: any) {
     return searchQ === "" ||
       student.name.toLowerCase().includes(searchQ.toLowerCase()) ||
       (student.id && student.id.toLowerCase().includes(searchQ.toLowerCase()));
+  }
+
+  function findStudents(status: string) {
+    return studentsQ.data?.filter(s => s.status === status && searched(s)) ?? []
+  }
+
+  const defaultColProps = {
+    hasCheckbox: mode !== SP_MODE,
+    checked, setChecked
   }
 
   if (loggedIn.isFetching) {
@@ -91,14 +111,15 @@ function Admin() {
         </Group>
         <Divider mb={rem(12)} />
         <Select
-          data={["A", "B", "C", "D", "E", "F", "G"]}
-          value={block}
+          data={["A", "B", "C", "D", "E", "F", "G", SP_MODE]}
+          value={mode}
           onChange={block => {
             if (block == null) return;
-            setBlock(block);
+            setMode(block);
           }}
           maw={rem(200)}
-          label="Free Period"
+          label="Free Period/SP"
+          maxDropdownHeight={300}
         />
         <TextInput
           value={searchQ}
@@ -121,37 +142,50 @@ function Admin() {
           </ActionIcon>
           <Text size="sm" c="gray.6">Reload students</Text>
         </Group>
-        <Divider mb={rem(16)} />
-        <Button bg="yellow" onClick={() => setVidsOpened(true)}>
-          Open Tentative Videos
-        </Button>
+        <Divider mb={rem(14)} />
+        <Stack gap={rem(10)}>
+          <Button bg="yellow" onClick={() => setVidsOpened(true)}>
+            Open Tentative Videos
+          </Button>
+          <Button bg="red" onClick={forceReset}>
+            Force Reset
+          </Button>
+        </Stack>
+        <Divider my={rem(14)} />
+        <Text m={0} c="gray.6">Senior year: {seniorYearQ.data ?? "Fetching..."}</Text>
       </AppShell.Navbar>
 
       <AppShell.Main maw={rem(1200)} mih="calc(100vh - 20px)">
-        <Title order={4} c="gray.7" mb={rem(8)}>Students with {block} block free</Title>
+        <Title order={4} c="gray.7" mb={rem(8)}>Students with {mode} block free</Title>
         <Divider mb={rem(16)} />
         <Group align="flex-start" grow style={{ height: "calc(100vh - 150px)" }}>
           <ColumnPanel
-            title="Checked In"
+            title={mode === SP_MODE ? "Checked Out" : "Checked In"}
             color="green"
-            students={studentsQ.data?.filter(s => s.checked_in === "yes" && isSearched(s)) ?? []}
-            checked={checked}
-            setChecked={setChecked}
+            students={findStudents(mode === SP_MODE ? "checked_out" : "checked_in")}
+            {...defaultColProps}
           />
           <ColumnPanel
-            title="Tentative"
+            title={mode === SP_MODE ? "Tentative(Out)" : "Tentative"}
             color="yellow"
-            students={studentsQ.data?.filter(s => s.checked_in === "tentative" && isSearched(s)) ?? []}
-            checked={checked}
-            setChecked={setChecked}
+            students={findStudents("tentative")}
+            {...defaultColProps}
           />
-          <ColumnPanel
-            title="Absent"
-            color="red"
-            students={studentsQ.data?.filter(s => s.checked_in === "no" && isSearched(s)) ?? []}
-            checked={checked}
-            setChecked={setChecked}
-          />
+          {
+            mode === SP_MODE  
+              ? <ColumnPanel
+                  title="Tentative(In)"
+                  color="yellow"
+                  students={findStudents("tentative_in")}
+                  {...defaultColProps}
+                />
+              : <ColumnPanel
+                  title="Absent"
+                  color="red"
+                  students={findStudents("nothing")}
+                  {...defaultColProps}
+                />
+          }
         </Group>
       </AppShell.Main>
 
@@ -161,17 +195,32 @@ function Admin() {
           studentsQ.refetch()
           setVidsOpened(false)
         }}
-        freeBlock={block}
-        students={studentsQ.data?.filter(s => s["checked_in"] === "tentative") ?? []} 
+        freeBlock={mode}
+        students={findStudents("tentative")} 
       />
     </AppShell>
   );
+}
+
+export async function forceReset() {
+  const confirmation = window.prompt("Type 'YES' if you want to force reset.")
+  if (confirmation !== "YES") {
+    window.alert("Operation was cancelled.")
+    return
+  }
+  const res = await fetchBackend("/checkin/forceReset/", { credentials: 'include' })
+  if (res.ok) {
+    window.alert("Reset successful")
+  } else {
+    window.alert("ERROR: " + res.statusText)
+  }
 }
 
 function ColumnPanel(props: {
   title: string,
   color: string,
   students: any[],
+  hasCheckbox: boolean,
   checked: (name: string) => boolean,
   setChecked: (checked: boolean, name: string) => void
 }) {
@@ -186,6 +235,7 @@ function ColumnPanel(props: {
             <StudentListing
               key={student.name}
               name={student.name}
+              hasCheckbox={props.hasCheckbox}
               checked={props.checked(student.name)}
               setChecked={c => props.setChecked(c, student.name)}
             />
@@ -198,6 +248,7 @@ function ColumnPanel(props: {
 
 function StudentListing(props: {
   name: string,
+  hasCheckbox: boolean
   checked: boolean,
   setChecked: (checked: boolean) => void
 }) {
@@ -211,14 +262,17 @@ function StudentListing(props: {
     >
       <Group justify="space-between" align="center">
         <Title order={5} fw={600}>{props.name}</Title>
-        <Checkbox
-          bg="#fafbfe"
-          checked={props.checked}
-          onChange={e => props.setChecked(e.currentTarget.checked)}
-          color="blue"
-          size="md"
-          radius="md"
-        />
+        {
+          props.hasCheckbox &&
+          <Checkbox
+            bg="#fafbfe"
+            checked={props.checked}
+            onChange={e => props.setChecked(e.currentTarget.checked)}
+            color="blue"
+            size="md"
+            radius="md"
+          />
+        }
       </Group>
     </Paper>
   );

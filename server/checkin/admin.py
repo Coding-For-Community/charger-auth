@@ -1,5 +1,4 @@
 from django.contrib import admin
-from solo.admin import SingletonModelAdmin
 from checkin.models import Student, CheckInRecord, FreeBlockToday, CheckInVideo, BgExecutorMsgs
 
 class StudentsAdmin(admin.ModelAdmin):
@@ -11,4 +10,4 @@ admin.site.register(Student, StudentsAdmin)
 admin.site.register(CheckInRecord)
 admin.site.register(FreeBlockToday)
 admin.site.register(CheckInVideo)
-admin.site.register(BgExecutorMsgs, SingletonModelAdmin)
+admin.site.register(BgExecutorMsgs)

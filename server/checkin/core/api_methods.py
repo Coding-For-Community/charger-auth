@@ -84,12 +84,14 @@ async def check_in(data: TentativeCheckInSchema, use_device_id=True):
                     checkin_record.sp_checkin_user = student
                     await checkin_record.asave()
             student.sp_status = SeniorPrivilegeStatus.CHECKED_OUT
+            await student.asave()
             return student, True
 
         case "sp_check_in":
             if student.sp_status != SeniorPrivilegeStatus.CHECKED_OUT:
                 raise HttpError(416, "Senior has not checked in yet.")
-            student.sp_status = SeniorPrivilegeStatus.CHECKED_IN
+            student.sp_status = SeniorPrivilegeStatus.AVAILABLE
+            await student.asave()
             return student, True
 
         case _:
