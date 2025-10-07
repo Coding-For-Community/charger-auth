@@ -17,6 +17,7 @@
     "@mantine/core": "^8.2.7",
     "@tanstack/react-query": "^5.85.5",
     "@tanstack/react-router": "^1.131.35",
+    "prettier": "^3.6.2",
     "qr-scanner": "^1.4.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.1",

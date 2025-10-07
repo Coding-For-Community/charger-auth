@@ -6,41 +6,47 @@ import { fetchBackend } from "../api/fetchBackend";
 import { useAdminLoginRedirect } from "../api/perms";
 
 export const Route = createLazyFileRoute("/KioskPage")({
-  component: KioskPage
-})
+  component: KioskPage,
+});
 
-const ManualCheckInModal = lazy(() => import("../components/ManualCheckInModal"))
-const QRCodeSVG = lazy(
-  () => import("qrcode.react").then(module => ({ default: module.QRCodeSVG })
-))
+const ManualCheckInModal = lazy(
+  () => import("../components/ManualCheckInModal"),
+);
+const QRCodeSVG = lazy(() =>
+  import("qrcode.react").then((module) => ({ default: module.QRCodeSVG })),
+);
 
 function KioskPage() {
-  const [modalOpen, setModalOpen] = useState(false)
-  const perms = useAdminLoginRedirect() 
+  const [modalOpen, setModalOpen] = useState(false);
+  const perms = useAdminLoginRedirect();
   const tokenQ = useQuery({
     queryKey: ["qrCodeToken"],
     queryFn: async () => {
-      const res = await fetchBackend("/checkin/kioskToken/", { credentials: "include" })
-      return (await res.json())
+      const res = await fetchBackend("/checkin/kioskToken/", {
+        credentials: "include",
+      });
+      return await res.json();
     },
     refetchInterval: (query) => {
-      if (!query.state.data) return 1000
-      const secs = query.state.data["time_until_refresh"]
-      return 1000 * secs
+      if (!query.state.data) return 1000;
+      const secs = query.state.data["time_until_refresh"];
+      return 1000 * secs;
     },
-    refetchOnMount: "always"
-  })
+    refetchOnMount: "always",
+  });
 
   if (tokenQ.isLoading) {
     return (
       <Center style={{ minHeight: "100vh" }}>
         <Loader size="xl" />
-        <Text ml="md" size="lg">Loading authentication and block info...</Text>
+        <Text ml="md" size="lg">
+          Loading authentication and block info...
+        </Text>
       </Center>
-    )
+    );
   }
 
-  const currFreeBlock: string | null = tokenQ.data["curr_free_block"]
+  const currFreeBlock: string | null = tokenQ.data["curr_free_block"];
 
   if (!currFreeBlock) {
     return (
@@ -49,15 +55,14 @@ function KioskPage() {
           No free period is currently available.
         </Text>
       </Stack>
-    )
+    );
   }
 
   return (
     <>
-      {
-        perms.data?.teacherMonitored &&
+      {perms.data?.teacherMonitored && (
         <ManualCheckInModal open={modalOpen} setOpen={setModalOpen} />
-      }
+      )}
       <Stack align="center" justify="center" h="100vh" gap={0}>
         <Text fz={30} fw="bold" mb={5}>
           Scan the QR code to check in!
@@ -65,15 +70,13 @@ function KioskPage() {
         <Text size="lg" c="dimmed" ta="center" mt={0} mb={30}>
           Current Free Period: {currFreeBlock} Block
         </Text>
-        <QRCodeSVG 
-          value={
-            `https://coding-for-community.github.io/charger-auth/#/CheckInPage?kioskToken=${tokenQ.data["token"]}`
-          } 
+        <QRCodeSVG
+          value={`https://coding-for-community.github.io/charger-auth/#/CheckInPage?kioskToken=${tokenQ.data["token"]}`}
           size={550}
           style={{ marginBottom: 30 }}
         />
-        <Button 
-          bg="red" 
+        <Button
+          bg="red"
           size="xl"
           display={perms.data?.teacherMonitored ? "block" : "none"}
           mb={30}
@@ -83,5 +86,5 @@ function KioskPage() {
         </Button>
       </Stack>
     </>
-  )
+  );
 }

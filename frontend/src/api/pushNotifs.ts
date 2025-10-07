@@ -3,24 +3,24 @@ import { fetchBackend } from "./fetchBackend";
 export async function disablePushNotifs(email: string) {
   const res = await fetchBackend("/notifs/unregister/", {
     method: "POST",
-    body: JSON.stringify({ email })
-  })
+    body: JSON.stringify({ email }),
+  });
   if (res.status != 200) {
-    console.error("Push notifs WERE NOT DISABLED: " + res.statusText)
+    console.error("Push notifs WERE NOT DISABLED: " + res.statusText);
   }
 }
 
 export async function enablePushNotifs(email: string) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.error('Push notifications are not supported.');
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    console.error("Push notifications are not supported.");
     return;
   }
 
   try {
     // 1. Request permission
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.warn('Permission for notifications was denied.');
+    if (permission !== "granted") {
+      console.warn("Permission for notifications was denied.");
       return;
     }
 
@@ -28,8 +28,8 @@ export async function enablePushNotifs(email: string) {
     const registration = await navigator.serviceWorker.ready;
 
     // 3. Get the VAPID public key from the backend
-    const response = await fetchBackend('/notifs/publicKey/');
-    const json = await response.json()
+    const response = await fetchBackend("/notifs/publicKey/");
+    const json = await response.json();
     const vapidPublicKey = json.publicKey;
     const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
@@ -40,27 +40,24 @@ export async function enablePushNotifs(email: string) {
     });
 
     // 5. Send the subscription object to the backend
-    await fetchBackend('/notifs/register/', {
+    await fetchBackend("/notifs/register/", {
       method: "POST",
-      body: JSON.stringify({ subscription, email })
+      body: JSON.stringify({ subscription, email }),
     });
 
-    console.log('Successfully subscribed to push notifications.');
-
+    console.log("Successfully subscribed to push notifications.");
   } catch (error) {
-    console.error('Failed to subscribe to push notifications:', error);
+    console.error("Failed to subscribe to push notifications:", error);
   }
-};
+}
 
 function urlBase64ToUint8Array(base64String: string) {
-  var padding = '='.repeat((4 - base64String.length % 4) % 4);
-  var base64 = (base64String + padding)
-    .replace(/\-/g, '+')
-    .replace(/_/g, '/');
- 
+  var padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  var base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
+
   var rawData = window.atob(base64);
   var outputArray = new Uint8Array(rawData.length);
- 
+
   for (var i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }

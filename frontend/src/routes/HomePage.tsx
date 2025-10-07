@@ -1,4 +1,15 @@
-import { ActionIcon, AppShell, Button, Card, Group, Modal, rem, Space, Stack, Title } from "@mantine/core";
+import {
+  ActionIcon,
+  AppShell,
+  Button,
+  Card,
+  Group,
+  Modal,
+  rem,
+  Space,
+  Stack,
+  Title,
+} from "@mantine/core";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import QrScanner from "qr-scanner";
 import { useEffect, useRef, useState } from "react";
@@ -7,26 +18,26 @@ import { disablePushNotifs, enablePushNotifs } from "../api/pushNotifs";
 import { IconSettings2 } from "../components/icons";
 
 export const Route = createFileRoute("/HomePage")({
-  component: HomePage
-})
+  component: HomePage,
+});
 
 function HomePage() {
-  const { email, removeEmail } = useLoginRedirect()
-  const [settingsOpened, setSettingsOpened] = useState(false)
-  const [notifsEnabled, setNotifsEnabled] = useState(false)
-  const navigate = useNavigate()
-  const vidRef = useRef<HTMLVideoElement | null>(null)
-  
+  const { email, removeEmail } = useLoginRedirect();
+  const [settingsOpened, setSettingsOpened] = useState(false);
+  const [notifsEnabled, setNotifsEnabled] = useState(false);
+  const navigate = useNavigate();
+  const vidRef = useRef<HTMLVideoElement | null>(null);
+
   useEffect(() => {
-    if (vidRef.current == null) return
+    if (vidRef.current == null) return;
     const scanner = new QrScanner(
-      vidRef.current, 
+      vidRef.current,
       (res) => {
-        const url = res.data
-        if (!url.includes("charger-auth")) return
-        navigate({ to: url.substring(url.indexOf("charger-auth/#") + 14) })
+        const url = res.data;
+        if (!url.includes("charger-auth")) return;
+        navigate({ to: url.substring(url.indexOf("charger-auth/#") + 14) });
       },
-      { 
+      {
         preferredCamera: "environment",
         highlightScanRegion: true,
         calculateScanRegion(video) {
@@ -37,19 +48,19 @@ function HomePage() {
           const width = size * 0.95;
           const height = size * 0.95;
           return { x, y, width, height };
-        }
-      }
-    )
-    scanner.start()
-  }, [vidRef.current])
-  
+        },
+      },
+    );
+    scanner.start();
+  }, [vidRef.current]);
+
   return (
     <AppShell>
       <AppShell.Header>
         <Group m={10} justify="space-between">
           <img src="icon.svg" width={rem(25)} height={rem(25)} />
           <Title order={3}>ChargerAuth</Title>
-          <ActionIcon 
+          <ActionIcon
             variant="transparent"
             onClick={() => setSettingsOpened(true)}
           >
@@ -61,7 +72,7 @@ function HomePage() {
       <AppShell.Main>
         <Stack justify="center" align="center">
           <Space h={rem(50)} />
-          <Title order={3} style={{textAlign: "center"}}>
+          <Title order={3} style={{ textAlign: "center" }}>
             Use the camera feed to scan a kiosk's QR code.
           </Title>
           <Card
@@ -92,30 +103,34 @@ function HomePage() {
       </AppShell.Main>
 
       <Modal opened={settingsOpened} onClose={() => setSettingsOpened(false)}>
-        <Title order={2} mb={rem(10)}>Settings</Title>
+        <Title order={2} mb={rem(10)}>
+          Settings
+        </Title>
         <Stack>
-          {
-            notifsEnabled 
-              ? <Button bg="gray" onClick={() => disablePushNotifs(email)}>
-                  Disable Push Notifs
-                </Button> 
-              : <Button onClick={() => {
-                  enablePushNotifs(email)
-                  setNotifsEnabled(true)
-                }}>
-                  Enable Push Notifs
-                </Button>
-          }
-          <Button 
+          {notifsEnabled ? (
+            <Button bg="gray" onClick={() => disablePushNotifs(email)}>
+              Disable Push Notifs
+            </Button>
+          ) : (
+            <Button
+              onClick={() => {
+                enablePushNotifs(email);
+                setNotifsEnabled(true);
+              }}
+            >
+              Enable Push Notifs
+            </Button>
+          )}
+          <Button
             bg="red"
             onClick={() => {
-              removeEmail()
-              navigate({ 
+              removeEmail();
+              navigate({
                 to: "/LoginPage",
                 search: () => ({
-                  redirectUrl: "/HomePage"
-                })
-              })
+                  redirectUrl: "/HomePage",
+                }),
+              });
             }}
           >
             Log Out
@@ -123,5 +138,5 @@ function HomePage() {
         </Stack>
       </Modal>
     </AppShell>
-  )
+  );
 }

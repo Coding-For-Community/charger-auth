@@ -1,4 +1,13 @@
-import { Button, Card, Group, Modal, rem, Stack, Text, Title } from "@mantine/core";
+import {
+  Button,
+  Card,
+  Group,
+  Modal,
+  rem,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import { useEffect, useState } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
 
@@ -7,44 +16,39 @@ interface FaceCheckProps {
 }
 
 export default function SnapEvidence(props: FaceCheckProps) {
-  const {
-    status,
-    startRecording,
-    stopRecording,
-    mediaBlobUrl,
-    previewStream
-  } = useReactMediaRecorder({ video: true, audio: false });
+  const { status, startRecording, stopRecording, mediaBlobUrl, previewStream } =
+    useReactMediaRecorder({ video: true, audio: false });
   const [modalOpened, setModalOpened] = useState(false);
 
   useEffect(() => {
-    startRecording()
+    startRecording();
     return () => {
       if (status === "recording") stopRecording();
-    }
+    };
   }, []);
 
   useEffect(() => {
     if (mediaBlobUrl == null) {
-      return
+      return;
     }
-    console.log("START")
+    console.log("START");
     fetch(mediaBlobUrl)
-      .then(resp => resp.blob())
-      .then(blob => {
+      .then((resp) => resp.blob())
+      .then((blob) => {
         const filename = "media_file.mp4"; // Replace with your desired filename and extension
         const fileType = blob.type; // Get the MIME type from the fetched blob
         const file = new File([blob], filename, { type: fileType });
-        props.onSend(file)
-      })
-  }, [mediaBlobUrl])
+        props.onSend(file);
+      });
+  }, [mediaBlobUrl]);
 
   return (
     <Stack mih="100vh" gap={0}>
       <Group align="center" justify="center">
         <Title order={4}>
           Take a picture of your surroundings{" "}
-          <Button 
-            onClick={() => setModalOpened(true)} 
+          <Button
+            onClick={() => setModalOpened(true)}
             variant="subtle"
             size="lg"
             p={0}
@@ -69,7 +73,7 @@ export default function SnapEvidence(props: FaceCheckProps) {
       >
         {status === "recording" && previewStream ? (
           <video
-            ref={video => {
+            ref={(video) => {
               if (video && previewStream) {
                 video.srcObject = previewStream;
               }
@@ -91,7 +95,12 @@ export default function SnapEvidence(props: FaceCheckProps) {
       </Card>
 
       <div style={{ padding: "12px 16px", background: "transparent" }}>
-        <Button onClick={stopRecording} loading={status !== "recording"} fullWidth size="lg">
+        <Button
+          onClick={stopRecording}
+          loading={status !== "recording"}
+          fullWidth
+          size="lg"
+        >
           Take Photo
         </Button>
       </div>
@@ -99,13 +108,13 @@ export default function SnapEvidence(props: FaceCheckProps) {
       <Modal opened={modalOpened} onClose={() => setModalOpened(false)}>
         <Title order={1}>Why request a picture in a sign-in app?</Title>
         <Text>
-          If you took longer than 10 seconds to open this page after scanning the QR code,
-          you'll get this. QR codes "expire" every 10 seconds to prevent people from sending sign-in links
-          to their friends.
+          If you took longer than 10 seconds to open this page after scanning
+          the QR code, you'll get this. QR codes "expire" every 10 seconds to
+          prevent people from sending sign-in links to their friends.
         </Text>
         <Text>
-          Once they expire, we make you send a photo of yourself
-          to make sure that you're on CA campus and not somewhere else.
+          Once they expire, we make you send a photo of yourself to make sure
+          that you're on CA campus and not somewhere else.
         </Text>
       </Modal>
     </Stack>

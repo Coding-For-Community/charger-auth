@@ -16,12 +16,14 @@
   border: none; /* Buttons have a default border that we need to remove */
   border-radius: 12px;
   cursor: pointer; /* Change mouse cursor on hover */
-  
+
   /* Shadow (combines shadowColor, shadowOffset, shadowOpacity, shadowRadius, and elevation) */
   box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
-  
+
   /* Smooth transition for hover effects */
-  transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+  transition:
+    background-color 0.2s ease-in-out,
+    transform 0.1s ease-in-out;
 }
 
 /* Optional: Add a subtle effect when the user hovers or presses the button */
@@ -38,5 +40,7 @@
   color: #ffffff;
   font-size: 16px;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Add a default font stack */
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif; /* Add a default font stack */
 }
