@@ -1,11 +1,13 @@
 import uuid
 from datetime import datetime
 
+
 class RandomTokenManager:
     """
     A simple class that refreshes a random, uuidv4 token at the specified interval_secs,
     but only if get() is called periodically.
     """
+
     def __init__(self, interval_secs: float):
         self.curr_uuid = uuid.uuid4()
         self.prev_uuid = self.curr_uuid

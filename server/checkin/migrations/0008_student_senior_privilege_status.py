@@ -6,13 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0007_checkinvideo'),
+        ("checkin", "0007_checkinvideo"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='student',
-            name='senior_privilege_status',
-            field=models.CharField(choices=[('na', 'not_available'), ('ia', 'available'), ('co', 'checked_out'), ('ci', 'checked_in')], default='na', max_length=2),
+            model_name="student",
+            name="senior_privilege_status",
+            field=models.CharField(
+                choices=[
+                    ("na", "not_available"),
+                    ("ia", "available"),
+                    ("co", "checked_out"),
+                    ("ci", "checked_in"),
+                ],
+                default="na",
+                max_length=2,
+            ),
         ),
     ]

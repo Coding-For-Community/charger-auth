@@ -6,15 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0005_freeblocktoday'),
+        ("checkin", "0005_freeblocktoday"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='BackgroundExecutorRequests',
+            name="BackgroundExecutorRequests",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('desire_manual_reset', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("desire_manual_reset", models.BooleanField(default=False)),
             ],
         ),
     ]

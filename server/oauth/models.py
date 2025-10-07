@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from config import settings
 
 load_dotenv()
-fernet = Fernet(os.environ['FERNET_KEY'].encode())
+fernet = Fernet(os.environ["FERNET_KEY"].encode())
+
 
 class BlackbaudToken(models.Model):
     token_type = models.CharField(max_length=40)
@@ -38,8 +39,9 @@ class BlackbaudToken(models.Model):
             token_type=token["token_type"],
             raw_access_token=fernet.encrypt(token["access_token"].encode()),
             raw_refresh_token=fernet.encrypt(token["refresh_token"].encode()),
-            expires_at=token["expires_at"]
+            expires_at=token["expires_at"],
         ).asave()
+
 
 if settings.DEBUG:
     admin.site.register(BlackbaudToken)

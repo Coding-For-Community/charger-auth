@@ -7,13 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0012_remove_checkinvideo_unique_checkin_vid_and_more'),
+        ("checkin", "0012_remove_checkinvideo_unique_checkin_vid_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='checkinvideo',
-            name='is_for',
-            field=models.CharField(max_length=2, primary_key=True, serialize=False, validators=[django.core.validators.RegexValidator('^([A-G]|SP)$')]),
+            model_name="checkinvideo",
+            name="is_for",
+            field=models.CharField(
+                max_length=2,
+                primary_key=True,
+                serialize=False,
+                validators=[django.core.validators.RegexValidator("^([A-G]|SP)$")],
+            ),
         ),
     ]

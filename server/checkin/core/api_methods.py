@@ -12,8 +12,10 @@ from oauth.api import oauth_client
 
 logger = logging.getLogger(__name__)
 
+
 async def _do_nothing():
     return None
+
 
 async def get_curr_free_block() -> FreeBlock | None:
     now = get_now()
@@ -22,6 +24,7 @@ async def get_curr_free_block() -> FreeBlock | None:
         if -600 <= delta_secs <= 600:
             return item.block
     return None
+
 
 async def get_next_free_block() -> (FreeBlock | None, float):
     now = get_now()
@@ -37,29 +40,42 @@ async def get_next_free_block() -> (FreeBlock | None, float):
         delta_secs = (tomorrow_830 - now).total_seconds()
     return None, delta_secs
 
+
 async def check_in(data: TentativeCheckInSchema, use_device_id=True):
     data.email = data.email.lower()
     free_block, student, checkin_record = await asyncio.gather(
         get_curr_free_block(),
         Student.objects.filter(email=data.email).afirst(),
-        CheckInRecord.objects.filter(device_id=data.device_id).afirst()
-        if use_device_id else _do_nothing(),
+        (
+            CheckInRecord.objects.filter(device_id=data.device_id).afirst()
+            if use_device_id
+            else _do_nothing()
+        ),
     )
 
     if not student:
         raise HttpError(400, "Invalid Student")
     if student.sp_status != SeniorPrivilegeStatus.NOT_AVAILABLE and data.mode is None:
-        raise HttpError(414, "Since this student is a senior, the mode must be specified.")
-    if not checkin_record and use_device_id: # Manual creation because we don't want to create a record if a 414 or 400 is thrown
+        raise HttpError(
+            414, "Since this student is a senior, the mode must be specified."
+        )
+    if not checkin_record and use_device_id:  
+        # Manual creation because we don't want to create a record if a 414 or 400 is thrown
         await CheckInRecord(device_id=data.device_id, free_blocks=free_block).asave()
 
     match data.mode:
         case "free_period" | None:
             if not free_block:
-                raise HttpError(405, "No free block is available - you're probably past the 10 min margin")
+                raise HttpError(
+                    405,
+                    "No free block is available - you're probably past the 10 min margin",
+                )
             if checkin_record:
                 if free_block in checkin_record.free_blocks:
-                    raise HttpError(409, "This device has already checked in from another student's account.")
+                    raise HttpError(
+                        409,
+                        "This device has already checked in from another student's account.",
+                    )
                 else:
                     checkin_record.free_blocks += free_block
                     await checkin_record.asave()
@@ -75,7 +91,10 @@ async def check_in(data: TentativeCheckInSchema, use_device_id=True):
             if checkin_record:
                 prev_user = checkin_record.sp_checkin_user
                 if prev_user and prev_user.email != data.email:
-                    raise HttpError(409, "This device has already checked in from another student's account.")
+                    raise HttpError(
+                        409,
+                        "This device has already checked in from another student's account.",
+                    )
                 else:
                     checkin_record.sp_checkin_user = student
                     await checkin_record.asave()
@@ -92,6 +111,7 @@ async def check_in(data: TentativeCheckInSchema, use_device_id=True):
 
         case _:
             raise Exception(f"Invalid mode {data.mode}.")
+
 
 async def parse_email(email_or_id: str):
     if not email_or_id.isdigit():

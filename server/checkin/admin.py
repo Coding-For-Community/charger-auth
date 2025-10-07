@@ -1,9 +1,17 @@
 from django.contrib import admin
-from checkin.models import Student, CheckInRecord, FreeBlockToday, CheckInVideo, BgExecutorMsgs
+from checkin.models import (
+    Student,
+    CheckInRecord,
+    FreeBlockToday,
+    CheckInVideo,
+    BgExecutorMsgs,
+)
+
 
 class StudentsAdmin(admin.ModelAdmin):
-    list_display = ('name',)
-    search_fields = ('name',)
+    list_display = ("name",)
+    search_fields = ("name",)
+
 
 # Register your models here.
 admin.site.register(Student, StudentsAdmin)

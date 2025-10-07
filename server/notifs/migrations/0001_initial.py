@@ -9,16 +9,30 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('checkin', '0001_initial'),
+        ("checkin", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SubscriptionData',
+            name="SubscriptionData",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('subscription', models.JSONField()),
-                ('student', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='checkin.student')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("subscription", models.JSONField()),
+                (
+                    "student",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="checkin.student",
+                    ),
+                ),
             ],
         ),
     ]

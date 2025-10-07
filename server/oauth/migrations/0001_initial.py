@@ -7,18 +7,25 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='BlackbaudToken',
+            name="BlackbaudToken",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('token_type', models.CharField(max_length=40)),
-                ('raw_access_token', models.BinaryField(max_length=1500)),
-                ('raw_refresh_token', models.BinaryField(max_length=400)),
-                ('expires_at', models.PositiveIntegerField()),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("token_type", models.CharField(max_length=40)),
+                ("raw_access_token", models.BinaryField(max_length=1500)),
+                ("raw_refresh_token", models.BinaryField(max_length=400)),
+                ("expires_at", models.PositiveIntegerField()),
             ],
         ),
     ]

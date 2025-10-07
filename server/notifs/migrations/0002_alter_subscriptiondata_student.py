@@ -7,14 +7,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0001_initial'),
-        ('notifs', '0001_initial'),
+        ("checkin", "0001_initial"),
+        ("notifs", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='subscriptiondata',
-            name='student',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='checkin.student'),
+            model_name="subscriptiondata",
+            name="student",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="checkin.student"
+            ),
         ),
     ]

@@ -4,6 +4,7 @@ Tokens are cached in the database and fetched upon startup.
 To generate a new token, run `py manage.py bboauth` in the terminal AFTER the server
 is started with `py main.py` on a different terminal.
 """
+
 import logging
 import os
 import ninja
@@ -14,9 +15,10 @@ from config import settings
 from oauth.models import BlackbaudToken
 
 load_dotenv()
-os.environ['AUTHLIB_INSECURE_TRANSPORT'] = "1" if settings.DEBUG else "0"
+os.environ["AUTHLIB_INSECURE_TRANSPORT"] = "1" if settings.DEBUG else "0"
 
 logger = logging.getLogger(__name__)
+
 
 async def oauth_client(fetch_token=True):
     """
@@ -28,9 +30,11 @@ async def oauth_client(fetch_token=True):
         logger.info("Blackbaud token was just initialized.")
     return oauth
 
+
 # noinspection PyUnusedLocal
 async def __update_token_impl(token, refresh_token=None, access_token=None):
     await BlackbaudToken.reset_from_dict(token)
+
 
 oauth = AsyncOAuth2Client(
     client_id=os.environ["OAUTH_CLIENT_ID"],
@@ -38,29 +42,30 @@ oauth = AsyncOAuth2Client(
     update_token=__update_token_impl,
     token_endpoint="https://oauth2.sky.blackbaud.com/token",
     base_url="https://api.sky.blackbaud.com/school/v1/",
-    headers={'Bb-Api-Subscription-Key': os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]}
+    headers={"Bb-Api-Subscription-Key": os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]},
 )
 
 router = ninja.Router()
+
 
 @router.get("/authorize/")
 async def authorize(request):
     client = await oauth_client(fetch_token=False)
     token = await client.fetch_token(
         authorization_response=request.build_absolute_uri(),
-        redirect_uri=request.build_absolute_uri("/oauth/authorize/")
+        redirect_uri=request.build_absolute_uri("/oauth/authorize/"),
     )
     await BlackbaudToken.reset_from_dict(token)
-    return {
-        "token": token
-    }
+    return {"token": token}
+
 
 if settings.DEBUG:
+
     @router.get("/test/{path:api_route}")
     async def test(request, api_route: str):
         client = await oauth_client()
         args_str = request.build_absolute_uri()
-        args_str = args_str[args_str.index("?"):] if "?" in args_str else ""
+        args_str = args_str[args_str.index("?") :] if "?" in args_str else ""
         res = await client.get(api_route + args_str)
         if res.status_code != 200:
             return res.text

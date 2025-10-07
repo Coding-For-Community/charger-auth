@@ -8,19 +8,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0006_backgroundexecutorrequests'),
+        ("checkin", "0006_backgroundexecutorrequests"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CheckInVideo',
+            name="CheckInVideo",
             fields=[
-                ('block', models.CharField(max_length=1, primary_key=True, serialize=False, validators=[django.core.validators.RegexValidator('[A-G]')])),
-                ('file', models.FileField(upload_to='checkin_vids/')),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='videos', to='checkin.student')),
+                (
+                    "block",
+                    models.CharField(
+                        max_length=1,
+                        primary_key=True,
+                        serialize=False,
+                        validators=[django.core.validators.RegexValidator("[A-G]")],
+                    ),
+                ),
+                ("file", models.FileField(upload_to="checkin_vids/")),
+                (
+                    "student",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="videos",
+                        to="checkin.student",
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('student', 'block'), name='unique_checkin_vid')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("student", "block"), name="unique_checkin_vid"
+                    )
+                ],
             },
         ),
     ]

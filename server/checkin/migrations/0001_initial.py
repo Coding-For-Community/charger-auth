@@ -8,18 +8,33 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Student',
+            name="Student",
             fields=[
-                ('free_blocks', models.CharField(blank=True, default='', max_length=8, validators=[django.core.validators.RegexValidator('[A-G]*')])),
-                ('checked_in_blocks', models.CharField(blank=True, default='', max_length=8, validators=[django.core.validators.RegexValidator('[A-G]*')])),
-                ('id', models.IntegerField(primary_key=True, serialize=False)),
-                ('name', models.CharField(default='[Unknown]', max_length=100)),
-                ('email', models.EmailField(default='[Unknown]', max_length=200)),
+                (
+                    "free_blocks",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        max_length=8,
+                        validators=[django.core.validators.RegexValidator("[A-G]*")],
+                    ),
+                ),
+                (
+                    "checked_in_blocks",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        max_length=8,
+                        validators=[django.core.validators.RegexValidator("[A-G]*")],
+                    ),
+                ),
+                ("id", models.IntegerField(primary_key=True, serialize=False)),
+                ("name", models.CharField(default="[Unknown]", max_length=100)),
+                ("email", models.EmailField(default="[Unknown]", max_length=200)),
             ],
         ),
     ]

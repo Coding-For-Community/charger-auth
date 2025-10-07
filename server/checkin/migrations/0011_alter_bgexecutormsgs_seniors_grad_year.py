@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0010_checkinrecord_sp_checkin_user'),
+        ("checkin", "0010_checkinrecord_sp_checkin_user"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='bgexecutormsgs',
-            name='seniors_grad_year',
+            model_name="bgexecutormsgs",
+            name="seniors_grad_year",
             field=models.PositiveSmallIntegerField(default=2026),
         ),
     ]

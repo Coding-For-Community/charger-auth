@@ -30,5 +30,6 @@ try:
             exc_info=exc,
         )
         return api.create_response(request, {"detail": exc.errors}, status=422)
+
 except Exception as e:
     logger.exception("Error when loading API: " + str(e))

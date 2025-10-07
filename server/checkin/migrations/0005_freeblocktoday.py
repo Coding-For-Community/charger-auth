@@ -7,15 +7,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0004_checkinrecord'),
+        ("checkin", "0004_checkinrecord"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='FreeBlockToday',
+            name="FreeBlockToday",
             fields=[
-                ('block', models.CharField(max_length=1, primary_key=True, serialize=False, validators=[django.core.validators.RegexValidator('[A-G]')])),
-                ('time', models.TimeField()),
+                (
+                    "block",
+                    models.CharField(
+                        max_length=1,
+                        primary_key=True,
+                        serialize=False,
+                        validators=[django.core.validators.RegexValidator("[A-G]")],
+                    ),
+                ),
+                ("time", models.TimeField()),
             ],
         ),
     ]

@@ -7,13 +7,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0009_bgexecutormsgs_delete_backgroundexecutorrequests_and_more'),
+        ("checkin", "0009_bgexecutormsgs_delete_backgroundexecutorrequests_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='checkinrecord',
-            name='sp_checkin_user',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='checkin.student'),
+            model_name="checkinrecord",
+            name="sp_checkin_user",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="checkin.student",
+            ),
         ),
     ]

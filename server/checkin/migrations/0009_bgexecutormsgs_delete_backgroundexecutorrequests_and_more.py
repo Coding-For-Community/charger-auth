@@ -6,28 +6,45 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0008_student_senior_privilege_status'),
+        ("checkin", "0008_student_senior_privilege_status"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='BgExecutorMsgs',
+            name="BgExecutorMsgs",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('desire_manual_reset', models.BooleanField(default=False)),
-                ('seniors_grad_year', models.PositiveSmallIntegerField(default=2024)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("desire_manual_reset", models.BooleanField(default=False)),
+                ("seniors_grad_year", models.PositiveSmallIntegerField(default=2024)),
             ],
         ),
         migrations.DeleteModel(
-            name='BackgroundExecutorRequests',
+            name="BackgroundExecutorRequests",
         ),
         migrations.RemoveField(
-            model_name='student',
-            name='senior_privilege_status',
+            model_name="student",
+            name="senior_privilege_status",
         ),
         migrations.AddField(
-            model_name='student',
-            name='sp_status',
-            field=models.CharField(choices=[('na', 'Not Available'), ('ia', 'Available'), ('co', 'Checked Out'), ('ci', 'Checked In')], default='na', max_length=2),
+            model_name="student",
+            name="sp_status",
+            field=models.CharField(
+                choices=[
+                    ("na", "Not Available"),
+                    ("ia", "Available"),
+                    ("co", "Checked Out"),
+                    ("ci", "Checked In"),
+                ],
+                default="na",
+                max_length=2,
+            ),
         ),
     ]

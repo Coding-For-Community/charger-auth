@@ -7,15 +7,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('checkin', '0003_remove_student_img_url'),
+        ("checkin", "0003_remove_student_img_url"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CheckInRecord',
+            name="CheckInRecord",
             fields=[
-                ('device_id', models.CharField(max_length=400, primary_key=True, serialize=False)),
-                ('free_blocks', models.CharField(blank=True, default='', max_length=8, validators=[django.core.validators.RegexValidator('[A-G]*')])),
+                (
+                    "device_id",
+                    models.CharField(max_length=400, primary_key=True, serialize=False),
+                ),
+                (
+                    "free_blocks",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        max_length=8,
+                        validators=[django.core.validators.RegexValidator("[A-G]*")],
+                    ),
+                ),
             ],
         ),
     ]
