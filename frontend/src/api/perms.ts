@@ -38,12 +38,12 @@ export function useAdminLoginRedirect() {
   })
 }
 
-export function useB64EmailRedirect() {
+export function useLoginRedirect() {
   const navigate = useNavigate()
-  const emailB64 = btoa(window.localStorage.getItem(EMAIL_KEY) ?? "")
+  const email = window.localStorage.getItem(EMAIL_KEY) ?? ""
 
   useEffect(() => {
-    if (!emailB64 || emailB64 === '') {
+    if (!email || email === '') {
       navigate({
         to: "/LoginPage",
         search: () => ({
@@ -54,7 +54,7 @@ export function useB64EmailRedirect() {
   }, [])
 
   return { 
-    emailB64, 
+    email, 
     setEmail(email: string) { window.localStorage.setItem(EMAIL_KEY, email) },
     removeEmail() { window.localStorage.removeItem(EMAIL_KEY) }
   }

@@ -7,8 +7,7 @@ import uuid
 import ninja
 
 from asgiref.sync import sync_to_async
-from base64 import b64encode
-from checkin.core.api_methods import get_curr_free_block, get_student, check_in, get_next_free_block
+from checkin.core.api_methods import get_curr_free_block, check_in, get_next_free_block, parse_email
 from checkin.core.compress_video import compress_video
 from checkin.core.random_token_manager import RandomTokenManager
 from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock, SeniorPrivilegeStatus, SP_MODE
@@ -19,7 +18,6 @@ from django.http import HttpRequest, FileResponse
 from ninja import UploadedFile, File
 from ninja.errors import HttpError
 from ninja.throttling import AuthRateThrottle
-from oauth.api import oauth_client
 
 router = ninja.Router()
 
@@ -101,8 +99,8 @@ async def fetch_sp_students(request):
     return output
 
 @router.get("/studentVid/")
-async def student_vid(request, free_block: FreeBlock, email_b64: str):
-    student = await get_student(email_b64)
+async def student_vid(request, free_block: FreeBlock, email: str):
+    student = await Student.objects.filter(email=email.lower()).afirst()
     if not student:
         raise HttpError(400, "Invalid Student")
     vid = await student.videos.filter(is_for=free_block).afirst()
@@ -110,22 +108,14 @@ async def student_vid(request, free_block: FreeBlock, email_b64: str):
         raise HttpError(402, "No Video found")
     return FileResponse(vid.file.open(), as_attachment=True, filename=vid.file.name)
 
-@router.get("/freeBlockNow/{email_b64}/")
-async def free_block_now_specific(request, email_b64: str):
-    student = await get_student(email_b64)
-    curr_free_block = await get_curr_free_block()
-    if not student or not curr_free_block:
-        return { "has_free_block": False }
-    # noinspection PyTypeChecker
+@router.get("/studentExists/{email_or_id}")
+async def student_exists(request, email_or_id: str):
+    email = await parse_email(email_or_id)
+    student = await Student.objects.filter(email=email).afirst()
     return {
-        "curr_free_block": curr_free_block,
-        "has_free_block": curr_free_block in student.free_blocks
+        "exists": student is not None,
+        "email": student.email if student else None,
     }
-
-@router.get("/studentExists/{email_b64}")
-async def student_exists(request, email_b64: str):
-    student = await get_student(email_b64)
-    return { "exists": student is not None }
 
 @router.get("/perms/")
 async def perms(request: HttpRequest):
@@ -169,17 +159,9 @@ async def check_in_student_tentative(
 async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchema):
     if not (await perms(request)).get("teacherMonitored"):
         raise HttpError(401, "Insufficient permissions for manual check-in.")
-    client = await oauth_client()
-    res = await client.get(f"/users/{data.student_id}")
-    email = res.json().get("email")
-    if not email:
-        raise HttpError(400, "Invalid student ID")
+    email = await parse_email(data.email_or_id)
     student, _ = await check_in(
-        TentativeCheckInSchema(
-            email_b64=b64encode(email.encode()).decode(),
-            device_id="",
-            mode=data.mode
-        ),
+        TentativeCheckInSchema(email=email, device_id="", mode=data.mode),
         use_device_id=False
     )
     return { "studentName": student.name }

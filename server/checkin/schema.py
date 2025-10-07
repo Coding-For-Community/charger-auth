@@ -9,7 +9,7 @@ from checkin.core.types import FreeBlock
 FreePeriodOption = Literal["free_period", "sp_check_in", "sp_check_out"] | None
 
 class TentativeCheckInSchema(Schema):
-    email_b64: str
+    email: str
     device_id: str
     mode: FreePeriodOption = None
 
@@ -25,5 +25,5 @@ class AdminLoginSchema(Schema):
     password: str
 
 class ManualCheckInSchema(Schema):
-    student_id: int
+    email_or_id: str
     mode: FreePeriodOption = None

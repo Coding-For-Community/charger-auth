@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from base64 import b64decode
 from datetime import datetime, timedelta
 
 from ninja.errors import HttpError
@@ -9,6 +8,7 @@ from checkin.core.get_now import get_now
 from checkin.core.types import FreeBlock, SeniorPrivilegeStatus
 from checkin.models import FreeBlockToday, Student, CheckInRecord
 from checkin.schema import TentativeCheckInSchema
+from oauth.api import oauth_client
 
 logger = logging.getLogger(__name__)
 
@@ -37,15 +37,11 @@ async def get_next_free_block() -> (FreeBlock | None, float):
         delta_secs = (tomorrow_830 - now).total_seconds()
     return None, delta_secs
 
-def get_student(email_b64: str):
-    email = b64decode(email_b64).decode('utf-8')
-    logger.info(f"Email: {email}")
-    return Student.objects.filter(email=email).afirst()
-
 async def check_in(data: TentativeCheckInSchema, use_device_id=True):
+    data.email = data.email.lower()
     free_block, student, checkin_record = await asyncio.gather(
         get_curr_free_block(),
-        get_student(data.email_b64),
+        Student.objects.filter(email=data.email).afirst(),
         CheckInRecord.objects.filter(device_id=data.device_id).afirst()
         if use_device_id else _do_nothing(),
     )
@@ -78,7 +74,7 @@ async def check_in(data: TentativeCheckInSchema, use_device_id=True):
                 raise HttpError(400, "Invalid Student")
             if checkin_record:
                 prev_user = checkin_record.sp_checkin_user
-                if prev_user and prev_user.email != b64decode(data.email_b64).decode('utf-8'):
+                if prev_user and prev_user.email != data.email:
                     raise HttpError(409, "This device has already checked in from another student's account.")
                 else:
                     checkin_record.sp_checkin_user = student
@@ -96,3 +92,18 @@ async def check_in(data: TentativeCheckInSchema, use_device_id=True):
 
         case _:
             raise Exception(f"Invalid mode {data.mode}.")
+
+async def parse_email(email_or_id: str):
+    if not email_or_id.isdigit():
+        return email_or_id.lower()
+    client = await oauth_client()
+    try:
+        res = await client.get(f"/users/{email_or_id}")
+        if res.status_code == 429:
+            raise HttpError(418, "Use your email instead")
+        email = res.json().get("email")
+        if not email:
+            raise HttpError(400, "Invalid student ID")
+        return email.lower()
+    except ValueError:
+        raise HttpError(400, "Invalid student ID or email")

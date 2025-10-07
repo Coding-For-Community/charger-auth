@@ -4,7 +4,6 @@ Endpoints for push notification support.
 import os
 import ninja
 
-from base64 import b64decode
 from dotenv import load_dotenv
 from ninja.errors import HttpError
 from pywebpush import webpush, WebPushException
@@ -18,7 +17,7 @@ load_dotenv()
 router = ninja.Router()
 
 class NeedsEmail(ninja.Schema):
-    email_b64: str
+    email: str
 
 class NeedsEmailAndSubscription(NeedsEmail):
     subscription: dict
@@ -29,15 +28,15 @@ def vapid_public_key(request):
         "publicKey": os.environ["VAPID_PUBLIC_KEY"]
     }
 
-@router.get("/enabled/{email_b64}/")
-async def is_registered(request, email_b64: str):
-    student = await get_student(email_b64)
-    data = await SubscriptionData.objects.aget(student=student).afirst()
+@router.get("/enabled/{email}/")
+async def is_registered(request, email: str):
+    student = await get_student(email)
+    data = await SubscriptionData.objects.filter(student=student).afirst()
     return { "registered": bool(data) }
 
 @router.post("/register/")
 async def register_webpush(request, data: NeedsEmailAndSubscription):
-    student = await get_student(data.email_b64)
+    student = await get_student(data.email)
     await SubscriptionData(
         student=student,
         subscription=data.subscription
@@ -46,20 +45,20 @@ async def register_webpush(request, data: NeedsEmailAndSubscription):
 
 @router.post("/unregister/")
 async def unregister_webpush(request, data: NeedsEmail):
-    student = await get_student(data.email_b64)
+    student = await get_student(data.email)
     await SubscriptionData.objects.filter(student=student).adelete()
     return { "success": True }
 
-async def get_student(email_b64: str):
-    student = await Student.objects.filter(email=b64decode(email_b64).decode('utf-8')).afirst()
+async def get_student(email: str):
+    student = await Student.objects.filter(email=email.lower()).afirst()
     if not student:
         raise HttpError(400, "Student does not exist")
     return student
 
 if settings.DEBUG:
-    @router.get("/test/{email_b64}")
-    async def test(request, email_b64: str):
-        student = await get_student(email_b64)
+    @router.get("/test/{email}")
+    async def test(request, email: str):
+        student = await get_student(email)
         data = await SubscriptionData.objects.filter(student=student).afirst()
         if data is None:
             return { "success": False }

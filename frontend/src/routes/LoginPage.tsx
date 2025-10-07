@@ -15,23 +15,27 @@ export const Route = createFileRoute('/LoginPage')({
 
 function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [id, setId] = useState('')
   const { redirectUrl } = Route.useSearch()
 
-  const emailM = useMutation({
+  const loginRunner = useMutation({
     mutationFn: async (e: FormEvent) => {
       e.preventDefault()
-      if (email.trim() === '') {
-        alert('Please enter your email.');
+      if (id.trim() === '') {
+        alert('Please enter your email or student ID.');
         return;
       }
-      const isValidRes = await fetchBackend("/checkin/studentExists/" + btoa(email))
-      const isValid = (await isValidRes.json())["exists"]
-      if (!isValid) {
-        window.alert("There is no user with email " + email + ".")
+      const isValidRes = await fetchBackend(`/checkin/studentExists/${id}`)
+      if (isValidRes.status === 418) {
+        window.alert("Sorry, we've hit a blackbaud API quota. Use your email instead.")
         return
       }
-      window.localStorage.setItem(EMAIL_KEY, email)
+      const json = await isValidRes.json()
+      if (!json["exists"]) {
+        window.alert("There is no user with email or student id " + id + ".")
+        return
+      }
+      window.localStorage.setItem(EMAIL_KEY, json["email"])
       navigate({ to: redirectUrl })
     }
   })
@@ -59,13 +63,13 @@ function LoginPage() {
         textAlign: 'center',
         marginBottom: rem(20)
       }}>
-        Enter your email to sign in
+        Enter your email or student id to sign in
       </Text>
-      <form onSubmit={emailM.mutate}>
+      <form onSubmit={loginRunner.mutate}>
         <TextInput
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="Email"
+          value={id}
+          onChange={e => setId(e.target.value)}
+          placeholder="Email or Student ID"
           size="lg"
           radius={12}
           mb={rem(20)}

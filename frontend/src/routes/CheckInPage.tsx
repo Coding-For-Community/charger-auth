@@ -2,7 +2,7 @@ import { Loader, Stack, Text, Title } from "@mantine/core";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { lazy, useEffect, useState } from "react";
 import { checkIn, useFingerprint, useUserToken, type CheckInResult } from '../api/checkIn.ts';
-import { useB64EmailRedirect } from "../api/perms.ts";
+import { useLoginRedirect } from "../api/perms.ts";
 import { IconAlertTriangle, IconCheck } from "../components/icons.tsx";
 
 export const Route = createFileRoute("/CheckInPage")({
@@ -19,7 +19,7 @@ function CheckInPage() {
   const [status, setStatus] = useState<CheckInResult>({ status: "loading" })
   const [initialLoad, setInitialLoad] = useState(false)
   const [evidenceTaken, setEvidenceTaken] = useState(false)
-  const { emailB64 } = useB64EmailRedirect()
+  const { email } = useLoginRedirect()
   const { kioskToken } = Route.useSearch()
   const userTokenQ = useUserToken(kioskToken)
   const fingerprintQ = useFingerprint()
@@ -30,7 +30,7 @@ function CheckInPage() {
       userTokenQ.data && userTokenQ.data !== 0
     ) {
       setInitialLoad(true)
-      checkIn(emailB64, fingerprintQ.data, userTokenQ.data)
+      checkIn(email, fingerprintQ.data, userTokenQ.data)
         .then(setStatus)
     }
   }, [fingerprintQ.data, userTokenQ.data, initialLoad])
@@ -41,7 +41,7 @@ function CheckInPage() {
         onSend={(file) => {
           setEvidenceTaken(true)
           setStatus({ status: "loading" })
-          checkIn(emailB64, fingerprintQ.data!, undefined, file)
+          checkIn(email, fingerprintQ.data!, undefined, file)
             .then(setStatus)
         }}
       />
@@ -100,7 +100,7 @@ function CheckInPage() {
         <ModeSelect 
           onSelect={(mode) => {
             setStatus({ status: "loading" })
-            checkIn(emailB64, fingerprintQ.data!, userTokenQ.data!, undefined, mode)
+            checkIn(email, fingerprintQ.data!, userTokenQ.data!, undefined, mode)
               .then(setStatus)
           }} 
         />

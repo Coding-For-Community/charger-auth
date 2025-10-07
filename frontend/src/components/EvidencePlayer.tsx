@@ -19,7 +19,7 @@ export default function EvidencePlayer(props: {
     let objectUrl: string | null = null;
     setLoading(true);
     let endpoint = `/checkin/studentVid?free_block=${props.freeBlock}`
-    endpoint += `&email_b64=${btoa(currStudent.email)}`
+    endpoint += `&email=${currStudent.email}`
     fetchBackend(endpoint)
       .then(res => res.blob())
       .then(blob => {

@@ -118,7 +118,7 @@ class Command(BaseCommand):
         if user["leader"].get("type") == "Teacher":
             return
         data = user["user"]
-        email = data["email"].strip()
+        email = data["email"].lower().strip()
         if not email:
             return
         student, _ = await Student.objects.aget_or_create(email=email, defaults={"checked_in_blocks": ""})

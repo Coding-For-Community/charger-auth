@@ -13,7 +13,7 @@ interface ManualCheckInProps {
 }
 
 export default function ManualCheckInModal(props: ManualCheckInProps) {
-  const [studentId, setStudentId] = useState("")
+  const [id, setId] = useState("")
   const [mode, setMode] = useState<ModeOption>('free_period');
   const [shouldReset, setShouldReset] = useState(false);
 
@@ -21,11 +21,11 @@ export default function ManualCheckInModal(props: ManualCheckInProps) {
   const checkinQ = useQuery({
     queryKey: ["manualCheckIn"],
     queryFn: async () => {
-      if (studentId === "") {
+      if (id === "") {
         return
       }
       setShouldReset(false)
-      const idAsNum = parseInt(studentId)
+      const idAsNum = parseInt(id)
       if (Number.isNaN(idAsNum)) {
         window.alert("Invalid student ID")
         return false
@@ -34,7 +34,7 @@ export default function ManualCheckInModal(props: ManualCheckInProps) {
         await fetchBackend("/checkin/runManual/", {
           method: "POST",
           credentials: 'include',
-          body: JSON.stringify({ student_id: idAsNum, mode })
+          body: JSON.stringify({ email_or_id: id, mode })
         })
       )
       if (res.status === "ok") {
@@ -50,7 +50,7 @@ export default function ManualCheckInModal(props: ManualCheckInProps) {
   function onClose() {
     props.setOpen(false)
     qClient.resetQueries({ queryKey: ["manualCheckIn"] })
-    setStudentId("")
+    setId("")
   }
 
   return (
@@ -74,9 +74,9 @@ export default function ManualCheckInModal(props: ManualCheckInProps) {
                 <Title mb={20}>Sign in manually</Title>
                 <form onSubmit={() => checkinQ.refetch()}>
                   <TextInput
-                    value={studentId}
-                    onChange={e => setStudentId(e.target.value)}
-                    placeholder="Enter your student ID"
+                    value={id}
+                    onChange={e => setId(e.target.value)}
+                    placeholder="Student ID or Email"
                     size="lg"
                     radius={12}
                     mb={20}

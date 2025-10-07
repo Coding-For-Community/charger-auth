@@ -2,7 +2,7 @@ import { ActionIcon, AppShell, Button, Card, Group, Modal, rem, Space, Stack, Ti
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import QrScanner from "qr-scanner";
 import { useEffect, useRef, useState } from "react";
-import { useB64EmailRedirect } from "../api/perms";
+import { useLoginRedirect } from "../api/perms";
 import { disablePushNotifs, enablePushNotifs } from "../api/pushNotifs";
 import { IconSettings2 } from "../components/icons";
 
@@ -11,11 +11,11 @@ export const Route = createFileRoute("/HomePage")({
 })
 
 function HomePage() {
+  const { email, removeEmail } = useLoginRedirect()
   const [settingsOpened, setSettingsOpened] = useState(false)
   const [notifsEnabled, setNotifsEnabled] = useState(false)
   const navigate = useNavigate()
   const vidRef = useRef<HTMLVideoElement | null>(null)
-  const { emailB64, removeEmail } = useB64EmailRedirect()
   
   useEffect(() => {
     if (vidRef.current == null) return
@@ -96,11 +96,11 @@ function HomePage() {
         <Stack>
           {
             notifsEnabled 
-              ? <Button bg="gray" onClick={() => disablePushNotifs(emailB64)}>
+              ? <Button bg="gray" onClick={() => disablePushNotifs(email)}>
                   Disable Push Notifs
                 </Button> 
               : <Button onClick={() => {
-                  enablePushNotifs(emailB64)
+                  enablePushNotifs(email)
                   setNotifsEnabled(true)
                 }}>
                   Enable Push Notifs
