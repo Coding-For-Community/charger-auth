@@ -6,8 +6,8 @@ from datetime import time
 from django.core.management import BaseCommand
 from dotenv import load_dotenv
 
-from checkin.core.types import FreeBlock, SeniorPrivilegeStatus
-from checkin.models import BgExecutorMsgs, Student
+from checkin.core.types import FreeBlock
+from checkin.models import PersistentState, Student
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,6 @@ class Command(BaseCommand):
 
     def __init__(self):
         super().__init__()
-        load_dotenv()
-        self.free_blocks_today: dict[FreeBlock, time] = {}
-        self.reset_count = 0
 
     def add_arguments(self, parser):
         parser.add_argument("-month", type=str, default="8", nargs="?")
@@ -39,23 +36,25 @@ async def main(month: str, day: str):
 
 
 async def __reset(increment_year=False):
-    from oauth.api import oauth_client
-
-    client = await oauth_client()
-
-    msgs = await BgExecutorMsgs.aget()
-    res = await client.get(f"/users?roles=4180&grad_year={msgs.seniors_grad_year}")
-    senior_emails = [
-        data.get("email") for data in res.json()["value"] if data.get("email")
-    ]
+    msgs = await PersistentState.aget()
+    seniors = __get_emails(msgs.seniors_grad_year)
+    last_year_seniors = __get_emails(msgs.seniors_grad_year - 1)
     async for student in Student.objects.all():
-        is_senior = student.email in senior_emails
-        has_privilege = student.sp_status != SeniorPrivilegeStatus.NOT_AVAILABLE
-        if is_senior and not has_privilege:
-            student.sp_status = SeniorPrivilegeStatus.AVAILABLE
-            await student.asave()
-        elif not is_senior and has_privilege:
+        student.has_sp = student.email in seniors
+        if student.email in last_year_seniors:
             await student.adelete()
+        else:
+            await student.asave()
     if increment_year:
         msgs.seniors_grad_year += 1
         await msgs.asave()
+
+async def __get_emails(grad_year: int):
+    from oauth.api import oauth_client
+
+    client = await oauth_client()
+    res = await client.get(f"/users?roles=4180&grad_year={grad_year}")
+    return [
+        data.get("email") for data in res.json()["value"] if data.get("email")
+    ]
+

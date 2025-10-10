@@ -2,7 +2,7 @@ import { Button, Center, Group, Loader, Modal, Title } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { fetchBackend } from "../api/fetchBackend";
 
-export default function EvidencePlayer(props: {
+export function EvidencePlayer(props: {
   opened: boolean;
   onClose: () => void;
   students: any[];

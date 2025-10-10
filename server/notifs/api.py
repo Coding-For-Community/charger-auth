@@ -12,18 +12,11 @@ from pywebpush import webpush, WebPushException
 from checkin.models import Student
 from config import settings
 from notifs.models import SubscriptionData
+from notifs.schema import RegisterSchema, UnregisterSchema
 
 load_dotenv()
 
 router = ninja.Router()
-
-
-class NeedsEmail(ninja.Schema):
-    email: str
-
-
-class NeedsEmailAndSubscription(NeedsEmail):
-    subscription: dict
 
 
 @router.get("/publicKey/")
@@ -31,22 +24,24 @@ def vapid_public_key(request):
     return {"publicKey": os.environ["VAPID_PUBLIC_KEY"]}
 
 
-@router.get("/enabled/{email}/")
-async def is_registered(request, email: str):
-    student = await get_student(email)
-    data = await SubscriptionData.objects.filter(student=student).afirst()
+@router.get("/enabled/{device_id}/")
+async def is_registered(request, device_id: str):
+    data = await SubscriptionData.objects.filter(device_id=device_id).afirst()
     return {"registered": bool(data)}
 
 
 @router.post("/register/")
-async def register_webpush(request, data: NeedsEmailAndSubscription):
-    student = await get_student(data.email)
-    await SubscriptionData(student=student, subscription=data.subscription).asave()
+async def register_webpush(request, data: RegisterSchema):
+    await SubscriptionData(
+        device_id=data.device_id,
+        student=await get_student(data.email),
+        subscription=data.subscription
+    ).asave()
     return {"success": True}
 
 
 @router.post("/unregister/")
-async def unregister_webpush(request, data: NeedsEmail):
+async def unregister_webpush(request, data: UnregisterSchema):
     student = await get_student(data.email)
     await SubscriptionData.objects.filter(student=student).adelete()
     return {"success": True}
@@ -73,7 +68,7 @@ if settings.DEBUG:
                 data="Mary had a little lamb, with a nice mint jelly",
                 vapid_private_key=os.environ["VAPID_PRIVATE_KEY"],
                 vapid_claims={
-                    "sub": "mailto:" + data.student.email,
+                    "sub": "mailto:" + student.email,
                 },
             )
             return {"success": True}

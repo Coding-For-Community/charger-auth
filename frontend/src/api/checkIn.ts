@@ -82,7 +82,7 @@ export async function parseCheckInRes(res: Response): Promise<CheckInResult> {
     case 405:
       return {
         status: "err",
-        msg: "There isn't a free period right now; try signing in later.",
+        msg: "You don't seem to have a free period right now.",
       };
     case 409:
       return {

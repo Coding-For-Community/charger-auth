@@ -8,173 +8,173 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as LoginPageRouteImport } from "./routes/LoginPage";
-import { Route as HomePageRouteImport } from "./routes/HomePage";
-import { Route as CheckInPageRouteImport } from "./routes/CheckInPage";
-import { Route as AdminLoginRouteImport } from "./routes/AdminLogin";
-import { Route as IndexRouteImport } from "./routes/index";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginPageRouteImport } from './routes/LoginPage'
+import { Route as CheckInPageRouteImport } from './routes/CheckInPage'
+import { Route as AdminLoginRouteImport } from './routes/AdminLogin'
+import { Route as IndexRouteImport } from './routes/index'
 
-const KioskPageLazyRouteImport = createFileRoute("/KioskPage")();
-const AdminLazyRouteImport = createFileRoute("/Admin")();
+const WelcomeLazyRouteImport = createFileRoute('/Welcome')()
+const KioskPageLazyRouteImport = createFileRoute('/KioskPage')()
+const AdminLazyRouteImport = createFileRoute('/Admin')()
 
+const WelcomeLazyRoute = WelcomeLazyRouteImport.update({
+  id: '/Welcome',
+  path: '/Welcome',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/Welcome.lazy').then((d) => d.Route))
 const KioskPageLazyRoute = KioskPageLazyRouteImport.update({
-  id: "/KioskPage",
-  path: "/KioskPage",
+  id: '/KioskPage',
+  path: '/KioskPage',
   getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import("./routes/KioskPage.lazy").then((d) => d.Route));
+} as any).lazy(() => import('./routes/KioskPage.lazy').then((d) => d.Route))
 const AdminLazyRoute = AdminLazyRouteImport.update({
-  id: "/Admin",
-  path: "/Admin",
+  id: '/Admin',
+  path: '/Admin',
   getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import("./routes/Admin.lazy").then((d) => d.Route));
+} as any).lazy(() => import('./routes/Admin.lazy').then((d) => d.Route))
 const LoginPageRoute = LoginPageRouteImport.update({
-  id: "/LoginPage",
-  path: "/LoginPage",
+  id: '/LoginPage',
+  path: '/LoginPage',
   getParentRoute: () => rootRouteImport,
-} as any);
-const HomePageRoute = HomePageRouteImport.update({
-  id: "/HomePage",
-  path: "/HomePage",
-  getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const CheckInPageRoute = CheckInPageRouteImport.update({
-  id: "/CheckInPage",
-  path: "/CheckInPage",
+  id: '/CheckInPage',
+  path: '/CheckInPage',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: "/AdminLogin",
-  path: "/AdminLogin",
+  id: '/AdminLogin',
+  path: '/AdminLogin',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute;
-  "/AdminLogin": typeof AdminLoginRoute;
-  "/CheckInPage": typeof CheckInPageRoute;
-  "/HomePage": typeof HomePageRoute;
-  "/LoginPage": typeof LoginPageRoute;
-  "/Admin": typeof AdminLazyRoute;
-  "/KioskPage": typeof KioskPageLazyRoute;
+  '/': typeof IndexRoute
+  '/AdminLogin': typeof AdminLoginRoute
+  '/CheckInPage': typeof CheckInPageRoute
+  '/LoginPage': typeof LoginPageRoute
+  '/Admin': typeof AdminLazyRoute
+  '/KioskPage': typeof KioskPageLazyRoute
+  '/Welcome': typeof WelcomeLazyRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute;
-  "/AdminLogin": typeof AdminLoginRoute;
-  "/CheckInPage": typeof CheckInPageRoute;
-  "/HomePage": typeof HomePageRoute;
-  "/LoginPage": typeof LoginPageRoute;
-  "/Admin": typeof AdminLazyRoute;
-  "/KioskPage": typeof KioskPageLazyRoute;
+  '/': typeof IndexRoute
+  '/AdminLogin': typeof AdminLoginRoute
+  '/CheckInPage': typeof CheckInPageRoute
+  '/LoginPage': typeof LoginPageRoute
+  '/Admin': typeof AdminLazyRoute
+  '/KioskPage': typeof KioskPageLazyRoute
+  '/Welcome': typeof WelcomeLazyRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  "/": typeof IndexRoute;
-  "/AdminLogin": typeof AdminLoginRoute;
-  "/CheckInPage": typeof CheckInPageRoute;
-  "/HomePage": typeof HomePageRoute;
-  "/LoginPage": typeof LoginPageRoute;
-  "/Admin": typeof AdminLazyRoute;
-  "/KioskPage": typeof KioskPageLazyRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/AdminLogin': typeof AdminLoginRoute
+  '/CheckInPage': typeof CheckInPageRoute
+  '/LoginPage': typeof LoginPageRoute
+  '/Admin': typeof AdminLazyRoute
+  '/KioskPage': typeof KioskPageLazyRoute
+  '/Welcome': typeof WelcomeLazyRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | "/"
-    | "/AdminLogin"
-    | "/CheckInPage"
-    | "/HomePage"
-    | "/LoginPage"
-    | "/Admin"
-    | "/KioskPage";
-  fileRoutesByTo: FileRoutesByTo;
+    | '/'
+    | '/AdminLogin'
+    | '/CheckInPage'
+    | '/LoginPage'
+    | '/Admin'
+    | '/KioskPage'
+    | '/Welcome'
+  fileRoutesByTo: FileRoutesByTo
   to:
-    | "/"
-    | "/AdminLogin"
-    | "/CheckInPage"
-    | "/HomePage"
-    | "/LoginPage"
-    | "/Admin"
-    | "/KioskPage";
+    | '/'
+    | '/AdminLogin'
+    | '/CheckInPage'
+    | '/LoginPage'
+    | '/Admin'
+    | '/KioskPage'
+    | '/Welcome'
   id:
-    | "__root__"
-    | "/"
-    | "/AdminLogin"
-    | "/CheckInPage"
-    | "/HomePage"
-    | "/LoginPage"
-    | "/Admin"
-    | "/KioskPage";
-  fileRoutesById: FileRoutesById;
+    | '__root__'
+    | '/'
+    | '/AdminLogin'
+    | '/CheckInPage'
+    | '/LoginPage'
+    | '/Admin'
+    | '/KioskPage'
+    | '/Welcome'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  AdminLoginRoute: typeof AdminLoginRoute;
-  CheckInPageRoute: typeof CheckInPageRoute;
-  HomePageRoute: typeof HomePageRoute;
-  LoginPageRoute: typeof LoginPageRoute;
-  AdminLazyRoute: typeof AdminLazyRoute;
-  KioskPageLazyRoute: typeof KioskPageLazyRoute;
+  IndexRoute: typeof IndexRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  CheckInPageRoute: typeof CheckInPageRoute
+  LoginPageRoute: typeof LoginPageRoute
+  AdminLazyRoute: typeof AdminLazyRoute
+  KioskPageLazyRoute: typeof KioskPageLazyRoute
+  WelcomeLazyRoute: typeof WelcomeLazyRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/KioskPage": {
-      id: "/KioskPage";
-      path: "/KioskPage";
-      fullPath: "/KioskPage";
-      preLoaderRoute: typeof KioskPageLazyRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/Admin": {
-      id: "/Admin";
-      path: "/Admin";
-      fullPath: "/Admin";
-      preLoaderRoute: typeof AdminLazyRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/LoginPage": {
-      id: "/LoginPage";
-      path: "/LoginPage";
-      fullPath: "/LoginPage";
-      preLoaderRoute: typeof LoginPageRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/HomePage": {
-      id: "/HomePage";
-      path: "/HomePage";
-      fullPath: "/HomePage";
-      preLoaderRoute: typeof HomePageRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/CheckInPage": {
-      id: "/CheckInPage";
-      path: "/CheckInPage";
-      fullPath: "/CheckInPage";
-      preLoaderRoute: typeof CheckInPageRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/AdminLogin": {
-      id: "/AdminLogin";
-      path: "/AdminLogin";
-      fullPath: "/AdminLogin";
-      preLoaderRoute: typeof AdminLoginRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/": {
-      id: "/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+    '/Welcome': {
+      id: '/Welcome'
+      path: '/Welcome'
+      fullPath: '/Welcome'
+      preLoaderRoute: typeof WelcomeLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/KioskPage': {
+      id: '/KioskPage'
+      path: '/KioskPage'
+      fullPath: '/KioskPage'
+      preLoaderRoute: typeof KioskPageLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/Admin': {
+      id: '/Admin'
+      path: '/Admin'
+      fullPath: '/Admin'
+      preLoaderRoute: typeof AdminLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/LoginPage': {
+      id: '/LoginPage'
+      path: '/LoginPage'
+      fullPath: '/LoginPage'
+      preLoaderRoute: typeof LoginPageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/CheckInPage': {
+      id: '/CheckInPage'
+      path: '/CheckInPage'
+      fullPath: '/CheckInPage'
+      preLoaderRoute: typeof CheckInPageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/AdminLogin': {
+      id: '/AdminLogin'
+      path: '/AdminLogin'
+      fullPath: '/AdminLogin'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -182,11 +182,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminLoginRoute: AdminLoginRoute,
   CheckInPageRoute: CheckInPageRoute,
-  HomePageRoute: HomePageRoute,
   LoginPageRoute: LoginPageRoute,
   AdminLazyRoute: AdminLazyRoute,
   KioskPageLazyRoute: KioskPageLazyRoute,
-};
+  WelcomeLazyRoute: WelcomeLazyRoute,
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()

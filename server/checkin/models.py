@@ -1,71 +1,91 @@
-from typing import Literal
+from typing import override
 
 from asgiref.sync import sync_to_async
+from bitfield import BitField
 from django.core.validators import RegexValidator
 from django.db import models
+from pydantic import ValidationError
 from solo.models import SingletonModel
 
-from checkin.core.types import FreeBlock, SeniorPrivilegeStatus
-
-
-def _many_free_blocks():
-    return models.CharField(
-        max_length=8, default="", validators=[RegexValidator(r"[A-G]*")], blank=True
-    )
-
-
-def _single_free_block():
-    return models.CharField(
-        max_length=1, validators=[RegexValidator("[A-G]")], primary_key=True
-    )
+from checkin.core.types import FreeBlock, ALL_FREE_BLOCKS
 
 
 class Student(models.Model):
     """
-    Represents a cary academy student.
+    A cary academy student.
     """
 
     email = models.EmailField(max_length=200, primary_key=True)
-    free_blocks: str = _many_free_blocks()
-    checked_in_blocks: str = _many_free_blocks()
+    free_blocks = BitField(flags=ALL_FREE_BLOCKS, default=0)
     name = models.CharField(max_length=100, default="[Unknown]")
-    sp_status = models.CharField(
-        max_length=2,
-        choices=SeniorPrivilegeStatus.choices,
-        default=SeniorPrivilegeStatus.NOT_AVAILABLE,
-    )
+    has_sp = models.BooleanField(default=False)
 
 
-class CheckInVideo(models.Model):
+class FreePeriodCheckIn(models.Model):
+    """
+    A free period check-in attempt.
+    """
+
     student = models.ForeignKey(
-        Student, on_delete=models.CASCADE, related_name="videos"
+        Student,
+        on_delete=models.CASCADE,
+        related_name="fp_records"
     )
-    # 'SP' stands for senior privileges
-    is_for: FreeBlock | Literal["SP"] = models.CharField(
-        max_length=2, validators=[RegexValidator("^([A-G]|SP)$")], primary_key=True
-    )
-    file = models.FileField(upload_to="checkin_vids/")
+    free_block_idx = models.PositiveSmallIntegerField(
+        choices=[(i, ALL_FREE_BLOCKS[i]) for i in range(len(ALL_FREE_BLOCKS))]
+    ) # Use PositiveSmallIntegerField for faster write speeds
+    device_id = models.CharField(max_length=32)
+    video = models.FileField(upload_to="checkin_vids/", blank=True)
+
+    async def astudent(self):
+        return await sync_to_async(lambda: self.student)()
+
+    def block(self) -> FreeBlock:
+        # The "display value" is the string repr
+        return self.get_free_block_idx_display()
+
+    def set_block(self, value: FreeBlock):
+        self.free_block_idx = ALL_FREE_BLOCKS.index(value)
+
+    @override
+    def save(self, *args, **kwargs):
+        if self.device_id and self.video:
+            raise ValidationError("You cannot provide both 'device_id' and 'video'. Both cannot be blank.")
+
+        if not self.device_id and not self.video:
+            raise ValidationError("You must provide one of 'device_id' or 'video'. Both cannot be blank.")
+        super().save(*args, **kwargs)
 
     class Meta:
-        # Each student can only have 1 checkin video per block and 1 video for senior privileges
         constraints = [
             models.UniqueConstraint(
-                fields=["student", "is_for"], name="unique_checkin_vid"
+                fields=["device_id", "free_block_idx"], name="unique_device_id"
+            ),
+            models.UniqueConstraint(
+                fields=["student", "free_block_idx"], name="unique_student"
             )
         ]
 
 
-class CheckInRecord(models.Model):
+class SeniorPrivilegeCheckIn(models.Model):
     """
-    A model used to ensure that 1 device can't sign in multiple people
-    at the same time. The device ID is uniquely assigned based on fingerprint.js.
+    A senior privileges check-in and check-out attempt.
     """
 
-    device_id = models.CharField(max_length=400, primary_key=True)
-    # Makes sure that each device can only check in once per block
-    free_blocks: str = _many_free_blocks()
-    # Makes sure that only 1 user can check in for senior privileges per block
-    sp_checkin_user = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True)
+    student = models.OneToOneField(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="sp_record"
+    )
+    device_id = models.CharField(max_length=32)
+    checked_out = models.BooleanField()
+    check_out_date = models.DateTimeField(auto_now_add=True)
+    check_in_date = models.DateTimeField(null=True)
+    video = models.FileField(upload_to="checkin_vids/", blank=True)
+
+    async def astudent(self):
+        return await sync_to_async(lambda: self.student)()
+
 
 
 class FreeBlockToday(models.Model):
@@ -79,9 +99,8 @@ class FreeBlockToday(models.Model):
     time = models.TimeField()
 
 
-class BgExecutorMsgs(SingletonModel):
+class PersistentState(SingletonModel):
     desire_manual_reset = models.BooleanField(default=False)
-    seniors_grad_year = models.PositiveSmallIntegerField(default=2026)
 
     @classmethod
     async def aget(cls):

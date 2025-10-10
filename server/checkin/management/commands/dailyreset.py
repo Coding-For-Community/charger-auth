@@ -10,9 +10,9 @@ from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import (
     Student,
     FreeBlockToday,
-    CheckInRecord,
-    BgExecutorMsgs,
-    CheckInVideo,
+    PersistentState,
+    FreePeriodCheckIn,
+    SeniorPrivilegeCheckIn,
 )
 from datetime import datetime, time
 from dotenv import load_dotenv
@@ -53,9 +53,10 @@ class Command(BaseCommand):
         )
         while True:
             schedule.run_pending()
-            _, bg_reqs = await asyncio.gather(asyncio.sleep(1), BgExecutorMsgs.aget())
+            _, bg_reqs = await asyncio.gather(asyncio.sleep(1), PersistentState.aget())
             if bg_reqs and bg_reqs.desire_manual_reset and self.reset_count < 3:
                 logger.info("Manual reset requested.")
+                await Student.objects.all().adelete()
                 await self.daily_reset(False)
                 bg_reqs.desire_manual_reset = False
                 await bg_reqs.asave()
@@ -68,23 +69,29 @@ class Command(BaseCommand):
         from oauth.api import oauth_client
 
         client = await oauth_client()
-
-        if reset_state:
-            update_args = {"free_blocks": "", "checked_in_blocks": ""}
-            await CheckInVideo.objects.all().adelete()
-        else:
-            update_args = {"free_blocks": ""}
-        # Fetch data and reset Students objects
         today_as_str = get_now().strftime("%m-%d-%Y")
-        rosters_res, calendar_res, _, _ = await asyncio.gather(
-            client.get("/academics/rosters"),
-            client.get(
-                f"/academics/schedules/master?"
-                f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
-            ),
-            Student.objects.all().aupdate(**update_args),
-            CheckInRecord.objects.all().adelete(),
-        )
+
+        # Fetch data and reset Students objects
+        if reset_state:
+            rosters_res, calendar_res, _, _, _ = await asyncio.gather(
+                client.get("/academics/rosters"),
+                client.get(
+                    f"/academics/schedules/master?"
+                    f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
+                ),
+                Student.objects.all().aupdate(free_blocks=""),
+                FreePeriodCheckIn.objects.all().adelete(),
+                _save_sp_data_to_lts(),
+            )
+        else:
+            rosters_res, calendar_res = await asyncio.gather(
+                client.get("/academics/rosters"),
+                client.get(
+                    f"/academics/schedules/master?"
+                    f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
+                )
+            )
+
         if rosters_res.status_code != 200:
             raise Exception(
                 "Roster data did not initialize. Err: \n" + rosters_res.text
@@ -134,9 +141,7 @@ class Command(BaseCommand):
         email = data["email"].lower().strip()
         if not email:
             return
-        student, _ = await Student.objects.aget_or_create(
-            email=email, defaults={"checked_in_blocks": ""}
-        )
+        student, _ = await Student.objects.aget_or_create(email=email)
         student.name = f"{data['first_name']} {data['last_name']}"
         if "middle_name" in data:
             student.name = student.name.replace(" ", f" {data['middle_name']} ")
@@ -151,7 +156,7 @@ class Command(BaseCommand):
                 "%H:%M"
             )
             schedule.every().day.at(reminder_time).do(
-                lambda: asyncio.create_task(__remind_student(student))
+                lambda: asyncio.create_task(_remind_student(student))
             )
         await student.asave()
 
@@ -170,7 +175,18 @@ class Command(BaseCommand):
         return None
 
 
-async def __remind_student(student: Student):
+async def _save_sp_data_to_lts():
+    items = SeniorPrivilegeCheckIn.objects.all()
+    item_list = [item async for item in items]
+    await items.adelete()
+    asyncio.create_task(
+        SeniorPrivilegeCheckIn.objects.using("lts").abulk_create(
+            item_list, ignore_conflicts=True
+        )
+    )
+
+
+async def _remind_student(student: Student):
     data = await SubscriptionData.objects.filter(student=student).afirst()
     if data:
         try:

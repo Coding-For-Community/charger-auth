@@ -6,6 +6,7 @@ from config import settings
 
 class SubscriptionData(models.Model):
     subscription = models.JSONField()
+    device_id = models.CharField(max_length=400, primary_key=True)
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
 
 

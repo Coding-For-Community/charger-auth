@@ -6,23 +6,22 @@ import asyncio
 import logging
 import uuid
 import ninja
+import pytz
 
 from asgiref.sync import sync_to_async
+from django.db import IntegrityError
+from django.db.models import Prefetch
+
 from checkin.core.api_methods import (
     get_curr_free_block,
-    check_in,
     get_next_free_block,
-    parse_email,
+    parse_email, DeviceIdConflict, get_checkin_record, get_emails_from_grad_year, get_perms, throw_if_not_admin,
 )
 from checkin.core.compress_video import compress_video
+from checkin.core.get_now import get_now
 from checkin.core.random_token_manager import RandomTokenManager
-from checkin.core.types import (
-    ALL_FREE_BLOCKS,
-    FreeBlock,
-    SeniorPrivilegeStatus,
-    SP_MODE,
-)
-from checkin.models import Student, CheckInVideo, BgExecutorMsgs
+from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
+from checkin.models import Student, PersistentState, FreePeriodCheckIn, SeniorPrivilegeCheckIn
 from checkin.schema import (
     CheckInSchema,
     AdminLoginSchema,
@@ -35,21 +34,22 @@ from ninja import UploadedFile, File
 from ninja.errors import HttpError
 from ninja.throttling import AuthRateThrottle
 
+from config import settings
+
 router = ninja.Router()
 
 kiosk_token_manager = RandomTokenManager(interval_secs=5)
 user_tokens = []
 user_tokens_lock = asyncio.Lock()
+us_eastern = pytz.timezone('America/New_York')
 logger = logging.getLogger(__name__)
 
 
 @router.get("/kioskToken/")
 async def token_for_kiosk(request: HttpRequest):
-    curr_perms, curr_free_block = await asyncio.gather(
-        perms(request), get_curr_free_block()
+    _, curr_free_block = await asyncio.gather(
+        throw_if_not_admin(request), get_curr_free_block()
     )
-    if not curr_perms.get("isAdmin"):
-        raise HttpError(401, "Scanner App not logged in.")
     token = kiosk_token_manager.get()
     token["curr_free_block"] = curr_free_block
     if curr_free_block is None:
@@ -71,8 +71,12 @@ async def token_for_student(request, kiosk_token: str):
 
 
 @router.get("/seniorYear/")
-async def senior_year(request):
-    return (await BgExecutorMsgs.aget()).seniors_grad_year
+def senior_year(request):
+    now = get_now()
+    if now.month < 7:
+        return now.year
+    else:
+        return now.year + 1
 
 
 @router.get("/students/{free_block}/")
@@ -80,34 +84,46 @@ async def fetch_students(request, free_block: FreeBlock):
     if free_block not in ALL_FREE_BLOCKS:
         raise HttpError(400, "Invalid free block: " + free_block)
     output = []
-    students = Student.objects.all()
-    async for student in students:
-        if free_block not in student.free_blocks:
-            continue
-        if free_block in student.checked_in_blocks:
-            has_vid = await student.videos.filter(is_for=free_block).afirst()
-            status = "tentative" if has_vid else "checked_in"
-        else:
+    records_prefetch = Prefetch(
+        "fp_records",
+        queryset=FreePeriodCheckIn.objects.filter(
+            free_block_idx=ALL_FREE_BLOCKS.index(free_block)
+        ),
+        to_attr="fp_records_filtered"
+    )
+    students = Student.objects.filter(free_blocks=getattr(Student.free_blocks, free_block))
+    students = students.prefetch_related(records_prefetch)
+    async for student in students.all():
+        records: list[FreePeriodCheckIn] = student.fp_records_filtered
+        if len(records) == 0:
             status = "nothing"
-        output.append({"name": student.name, "status": status, "email": student.email})
+        elif records[0].video.name:
+            status = "tentative"
+        else:
+            status = "checked_in"
+        output.append({
+            "name": student.name,
+            "email": student.email,
+            "status": status
+        })
     return output
 
 
 @router.get("/spStudents/")
 async def fetch_sp_students(request):
     output = []
-    students = Student.objects.all()
-    async for student in students:
-        if student.sp_status == SeniorPrivilegeStatus.NOT_AVAILABLE:
-            continue
-        vid = await student.videos.filter(is_for=SP_MODE).afirst()
-        if student.sp_status == SeniorPrivilegeStatus.CHECKED_OUT:
-            status = "tentative" if vid else "checked_out"
-        elif vid and student.sp_status == SeniorPrivilegeStatus.AVAILABLE:
-            status = "tentative_in"
-        else:
-            continue
-        output.append({"name": student.name, "email": student.email, "status": status})
+    records = SeniorPrivilegeCheckIn.objects.select_related("student")
+    async for record in records.all():
+        status = f"{"tentative" if record.video else "checked"}_{"out" if record.checked_out else "in"}"
+        date_fmt = f"{record.check_out_date.astimezone(us_eastern).strftime("%I:%M %p")}"
+        if record.check_in_date:
+            date_fmt += f" - {record.check_in_date.astimezone(us_eastern).strftime("%I:%M %p")}"
+        output.append({
+            "name": record.student.name,
+            "email": record.student.email,
+            "status": status,
+            "date_str": date_fmt
+        })
     return output
 
 
@@ -116,10 +132,11 @@ async def student_vid(request, free_block: FreeBlock, email: str):
     student = await Student.objects.filter(email=email.lower()).afirst()
     if not student:
         raise HttpError(400, "Invalid Student")
-    vid = await student.videos.filter(is_for=free_block).afirst()
-    if not vid:
+    record = await FreePeriodCheckIn.objects.filter(video__isnull=False).afirst()
+    if not record:
         raise HttpError(402, "No Video found")
-    return FileResponse(vid.file.open(), as_attachment=True, filename=vid.file.name)
+    file = record.video.file
+    return FileResponse(file.open(), as_attachment=True, filename=file.name)
 
 
 @router.get("/studentExists/{email_or_id}")
@@ -133,22 +150,22 @@ async def student_exists(request, email_or_id: str):
 
 
 @router.get("/perms/")
-async def perms(request: HttpRequest):
-    user = await request.auser()
-    if not (user.is_authenticated and user.is_superuser):
-        return {"isAdmin": False}
-    return {
-        "isAdmin": True,
-        "teacherMonitored": user.username == "TeacherMonitoredKiosk",
-    }
+async def perms_endpoint(request):
+    return await get_perms(request)
 
 
 @router.post("/run/")
 async def check_in_student(request, data: CheckInSchema):
-    if data.mode != "sp_check_in" and data.user_token not in user_tokens:
-        print(f"USER TOKENS: {user_tokens}")
-        raise HttpError(403, "IP/Token invalid - retry with /checkin/runTentative/.")
-    student, _ = await check_in(data)
+    if data.user_token not in user_tokens:
+        raise HttpError(
+            403,
+            "Check-In Token invalid - use runTentative with a video."
+        )
+    record, student = await get_checkin_record(data.email, data.mode, data.device_id)
+    try:
+        await record.asave()
+    except IntegrityError:
+        raise DeviceIdConflict
     async with user_tokens_lock:
         user_tokens.remove(data.user_token)
     return {"studentName": student.name}
@@ -158,30 +175,30 @@ async def check_in_student(request, data: CheckInSchema):
 async def check_in_student_tentative(
     request, input_data: TentativeCheckInSchema, raw_video: File[UploadedFile]
 ):
-    student, just_checked_in = await check_in(input_data)
-    is_for = (
-        (await get_curr_free_block()) if input_data.mode == "free_period" else SP_MODE
+    record, student = await get_checkin_record(
+        input_data.email,
+        input_data.mode,
+        input_data.device_id
     )
-
-    if just_checked_in:
-        raw_video.name = f"{student.name}-{is_for}.webm"
-        with compress_video(raw_video) as video_file:
-            vid_obj = CheckInVideo(student=student, is_for=is_for)
-            await sync_to_async(vid_obj.file.save)(video_file.name, video_file)
-            await vid_obj.asave()
-
+    raw_video.name = f"{student.name}-{input_data.mode}.webm"
+    with compress_video(raw_video) as video_file:
+        await sync_to_async(record.video.save)(video_file.name, video_file)
+    try:
+        await record.asave()
+    except IntegrityError:
+        raise DeviceIdConflict
     return {"studentName": student.name}
 
 
 @router.post("/runManual/")
 async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchema):
-    if not (await perms(request)).get("teacherMonitored"):
-        raise HttpError(401, "Insufficient permissions for manual check-in.")
+    await throw_if_not_admin(request)
     email = await parse_email(data.email_or_id)
-    student, _ = await check_in(
-        TentativeCheckInSchema(email=email, device_id="", mode=data.mode),
-        use_device_id=False,
-    )
+    record, student = await get_checkin_record(email, data.mode, uuid.uuid4().hex)
+    try:
+        await record.asave()
+    except IntegrityError:
+        pass
     return {"studentName": student.name}
 
 
@@ -200,10 +217,74 @@ async def admin_login(request: HttpRequest, data: AdminLoginSchema):
 
 
 @router.post("/forceReset/", throttle=AuthRateThrottle("2/m"))
-async def force_reset(request: HttpRequest):
-    if not (await perms(request)).get("isAdmin"):
-        raise HttpError(401, "Scanner App not logged in.")
-    msgs = await BgExecutorMsgs.aget()
+async def force_reset(request):
+    await throw_if_not_admin(request)
+    msgs = await PersistentState.aget()
     msgs.desire_manual_reset = True
     await msgs.asave()
     return {"success": True}
+
+
+@router.get("/spEnabled/")
+async def senior_privileges_enabled(request):
+    return {
+        "enabled": await Student.objects.filter(has_sp=True).aexists(),
+    }
+
+
+@router.post("/enableSp/")
+async def enable_senior_privileges(request, enable_for: str | None = None):
+    await throw_if_not_admin(request)
+    s_year = senior_year(request)
+    seniors, last_year_seniors = await asyncio.gather(
+        get_emails_from_grad_year(s_year),
+        get_emails_from_grad_year(s_year - 1)
+    )
+    criterion = Student.objects.filter(email__in=seniors)
+    if enable_for:
+        criterion = criterion.filter(email=enable_for)
+    async for student in criterion:
+        student.has_sp = True
+        await student.asave()
+    return {"success": True}
+
+
+@router.post("/disableSp/")
+async def disable_senior_privileges(request):
+    await throw_if_not_admin(request)
+    async for student in Student.objects.filter(has_sp=True):
+        student.has_sp = False
+        await student.asave()
+    return {"success": True}
+
+
+if settings.DEBUG:
+    @router.get("/test/addLotsOfStudents/")
+    async def add_lots_of_students(request):
+        import random
+        import string
+
+        def generate_random_string(length):
+            # Define the pool of characters to choose from
+            # string.ascii_letters includes both lowercase and uppercase letters
+            # string.digits includes numbers 0-9
+            characters = string.ascii_letters + string.digits
+
+            # Use random.choice to select characters and join them
+            random_string = ''.join(random.choice(characters) for i in range(length))
+            return random_string
+
+        for i in range(500):
+            random_str = generate_random_string(15)
+            student = Student(email=random_str + "@caryacademy.org")
+            if i < 80:
+                student.free_blocks.A = True
+                student.name += "WithA"
+            await student.asave()
+        return "Yeah i just did a thing"
+
+    @router.get("/test/removeUnknowns/")
+    async def remove_unknowns(request):
+        await Student.objects.filter(name__contains="[Unknown]").adelete()
+        return "Yeah i just did a thing"
+

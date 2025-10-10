@@ -1,7 +1,8 @@
 # ChargerAuth
 
 ### TODO
-- Senior Priveleges
+- Revoke Senior Privileges for certain ppl
+- 
 
 ### Setup
 ```bash

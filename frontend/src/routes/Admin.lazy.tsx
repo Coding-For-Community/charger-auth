@@ -1,3 +1,5 @@
+import "@mantine/dates/styles.css";
+
 import {
   ActionIcon,
   AppShell,
@@ -18,16 +20,17 @@ import {
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { lazy, useState } from "react";
+import { useState } from "react";
 import { fetchBackend } from "../api/fetchBackend.ts";
 import { useAdminLoginRedirect } from "../api/perms.ts";
 import { IconReload, IconSettings2 } from "../components/icons.tsx";
+import { DateTimePicker } from "@mantine/dates";
+import { EvidencePlayer } from "../components/EvidencePlayer.tsx";
 
 export const Route = createLazyFileRoute("/Admin")({
   component: Admin,
 });
 
-const VideoPlayer = lazy(() => import("../components/EvidencePlayer.tsx"));
 const SP_MODE = "Senior Privileges";
 
 function Admin() {
@@ -168,13 +171,31 @@ function Admin() {
           label="Free Period/SP"
           maxDropdownHeight={300}
         />
+        <Text mt={rem(16)} mb={0} fz={14} fw={500}>Search by date & time</Text>
+        <Group gap={2}>
+          <DateTimePicker 
+            w={95}
+            valueFormat="DD MMM YY hh:mm A"
+            styles={{
+              input: { height: 50 }
+            }} 
+          />
+          <Text>-</Text>
+          <DateTimePicker 
+            w={95}
+            valueFormat="DD MMM YY hh:mm A"
+            styles={{
+              input: { height: 50 }
+            }} 
+          />
+        </Group>
         <TextInput
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
           placeholder="Search by name"
           maw={rem(200)}
           label="Student Search"
-          mt={rem(16)}
+          mt={rem(10)}
         />
         <Divider mt={rem(16)} />
         <Group gap={rem(8)}>
@@ -206,7 +227,7 @@ function Admin() {
         </Text>
       </AppShell.Navbar>
 
-      <AppShell.Main maw={rem(1200)} mih="calc(100vh - 20px)">
+      <AppShell.Main mih="calc(100vh - 20px)">
         <Title order={4} c="gray.7" mb={rem(8)}>
           Students with {mode} block free
         </Title>
@@ -216,18 +237,27 @@ function Admin() {
           grow
           style={{ height: "calc(100vh - 150px)" }}
         >
+          {
+            mode === SP_MODE &&
+            <ColumnPanel
+              title={"Checked Out"}
+              color="red"
+              students={findStudents("checked_out")}
+              {...defaultColProps}
+            />
+          }
           <ColumnPanel
-            title={mode === SP_MODE ? "Checked Out" : "Checked In"}
+            title={"Checked In"}
             color="green"
-            students={findStudents(
-              mode === SP_MODE ? "checked_out" : "checked_in",
-            )}
+            students={findStudents("checked_in")}
             {...defaultColProps}
           />
           <ColumnPanel
             title={mode === SP_MODE ? "Tentative(Out)" : "Tentative"}
             color="yellow"
-            students={findStudents("tentative")}
+            students={findStudents(
+              mode === SP_MODE ? "tentative_out" : "tentative" 
+            )}
             {...defaultColProps}
           />
           {mode === SP_MODE ? (
@@ -248,7 +278,7 @@ function Admin() {
         </Group>
       </AppShell.Main>
 
-      <VideoPlayer
+      <EvidencePlayer
         opened={vidsOpened}
         onClose={() => {
           studentsQ.refetch();
@@ -313,6 +343,7 @@ function ColumnPanel(props: {
               hasCheckbox={props.hasCheckbox}
               checked={props.checked(student.name)}
               setChecked={(c) => props.setChecked(c, student.name)}
+              dateStr={student.date_str}
             />
           ))
         )}
@@ -326,19 +357,24 @@ function StudentListing(props: {
   hasCheckbox: boolean;
   checked: boolean;
   setChecked: (checked: boolean) => void;
+  dateStr?: string;
 }) {
   return (
     <Paper
       radius={rem(10)}
-      p={rem(14)}
+      p={rem(10)}
       mb={rem(10)}
       bd="1.5px solid #e3e6ea"
       onClick={() => props.setChecked(!props.checked)}
     >
       <Group justify="space-between" align="center">
-        <Title order={5} fw={600}>
-          {props.name}
-        </Title>
+        <Stack gap={5}>
+          <Title order={5} fw={600}>{props.name}</Title>
+          {
+            props.dateStr &&
+            <Text size="sm" c="gray.6" m={0}>({props.dateStr})</Text>
+          }
+        </Stack>
         {props.hasCheckbox && (
           <Checkbox
             bg="#fafbfe"

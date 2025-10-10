@@ -2,19 +2,16 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 
+from django.http import HttpRequest
+from future.backports.datetime import timezone
 from ninja.errors import HttpError
 
 from checkin.core.get_now import get_now
-from checkin.core.types import FreeBlock, SeniorPrivilegeStatus
-from checkin.models import FreeBlockToday, Student, CheckInRecord
-from checkin.schema import TentativeCheckInSchema
+from checkin.core.types import FreeBlock, CheckInOption
+from checkin.models import FreeBlockToday, Student, FreePeriodCheckIn, SeniorPrivilegeCheckIn
 from oauth.api import oauth_client
 
 logger = logging.getLogger(__name__)
-
-
-async def _do_nothing():
-    return None
 
 
 async def get_curr_free_block() -> FreeBlock | None:
@@ -41,78 +38,6 @@ async def get_next_free_block() -> (FreeBlock | None, float):
     return None, delta_secs
 
 
-async def check_in(data: TentativeCheckInSchema, use_device_id=True):
-    data.email = data.email.lower()
-    free_block, student, checkin_record = await asyncio.gather(
-        get_curr_free_block(),
-        Student.objects.filter(email=data.email).afirst(),
-        (
-            CheckInRecord.objects.filter(device_id=data.device_id).afirst()
-            if use_device_id
-            else _do_nothing()
-        ),
-    )
-
-    if not student:
-        raise HttpError(400, "Invalid Student")
-    if student.sp_status != SeniorPrivilegeStatus.NOT_AVAILABLE and data.mode is None:
-        raise HttpError(
-            414, "Since this student is a senior, the mode must be specified."
-        )
-    if not checkin_record and use_device_id:  
-        # Manual creation because we don't want to create a record if a 414 or 400 is thrown
-        await CheckInRecord(device_id=data.device_id, free_blocks=free_block).asave()
-
-    match data.mode:
-        case "free_period" | None:
-            if not free_block:
-                raise HttpError(
-                    405,
-                    "No free block is available - you're probably past the 10 min margin",
-                )
-            if checkin_record:
-                if free_block in checkin_record.free_blocks:
-                    raise HttpError(
-                        409,
-                        "This device has already checked in from another student's account.",
-                    )
-                else:
-                    checkin_record.free_blocks += free_block
-                    await checkin_record.asave()
-            checked_in = free_block not in student.checked_in_blocks
-            if checked_in:
-                student.checked_in_blocks += free_block
-                await student.asave()
-            return student, checked_in
-
-        case "sp_check_out":
-            if student.sp_status == SeniorPrivilegeStatus.NOT_AVAILABLE:
-                raise HttpError(400, "Invalid Student")
-            if checkin_record:
-                prev_user = checkin_record.sp_checkin_user
-                if prev_user and prev_user.email != data.email:
-                    raise HttpError(
-                        409,
-                        "This device has already checked in from another student's account.",
-                    )
-                else:
-                    checkin_record.sp_checkin_user = student
-                    await checkin_record.asave()
-            student.sp_status = SeniorPrivilegeStatus.CHECKED_OUT
-            await student.asave()
-            return student, True
-
-        case "sp_check_in":
-            if student.sp_status != SeniorPrivilegeStatus.CHECKED_OUT:
-                raise HttpError(416, "Senior has not checked in yet.")
-            student.sp_status = SeniorPrivilegeStatus.AVAILABLE
-            await student.asave()
-            return student, True
-
-        case _:
-            raise Exception(f"Invalid mode {data.mode}.")
-
-
 async def parse_email(email_or_id: str):
     if not email_or_id.isdigit():
         return email_or_id.lower()
@@ -127,3 +52,87 @@ async def parse_email(email_or_id: str):
         return email.lower()
     except ValueError:
         raise HttpError(400, "Invalid student ID or email")
+
+
+async def get_checkin_record(email: str, mode: CheckInOption, device_id: str) -> tuple[
+    FreePeriodCheckIn | SeniorPrivilegeCheckIn, Student
+]:
+    email = email.lower()
+    free_block, student = await asyncio.gather(
+        get_curr_free_block(),
+        Student.objects.filter(email=email).afirst()
+    )
+    is_sp_mode = mode in ["sp_check_in", "sp_check_out"]
+
+    if student is None or (not student.has_sp and is_sp_mode):
+        raise InvalidStudent
+    if student.has_sp and mode is None:
+        raise ModeRequiredForSenior
+    if mode == "free_period" or mode is None:
+        if free_block is None or free_block not in student.free_blocks:
+            raise NoFreeBlock
+        record = FreePeriodCheckIn(student=student, device_id=device_id)
+        record.set_block(free_block)
+        return record, student
+    elif is_sp_mode:
+        record = await SeniorPrivilegeCheckIn.objects.filter(student__email=email).afirst()
+        if record and not record.checked_out and mode == "sp_check_in":
+            raise HttpError(416, "Senior has not checked in yet.")
+        if not record:
+            record = SeniorPrivilegeCheckIn(student=student)
+        elif record.device_id != device_id:
+            raise DeviceIdConflict
+        record.device_id = device_id
+        if mode == "sp_check_in":
+            record.checked_out = False
+            record.check_in_date = datetime.now(timezone.utc)
+        else:
+            record.checked_out = True
+        return record, student
+    else:
+        raise Exception("Invalid mode: schema err")
+
+
+async def get_emails_from_grad_year(grad_year: int):
+    from oauth.api import oauth_client
+
+    client = await oauth_client()
+    res = await client.get(f"/users?roles=4180&grad_year={grad_year}")
+    return [
+        data.get("email") for data in res.json()["value"] if data.get("email")
+    ]
+
+
+async def get_perms(request: HttpRequest):
+    user = await request.auser()
+    if not (user.is_authenticated and user.is_superuser):
+        return {"isAdmin": False}
+    return {
+        "isAdmin": True,
+        "teacherMonitored": user.username == "TeacherMonitoredKiosk",
+    }
+
+
+async def throw_if_not_admin(request: HttpRequest):
+    if not (await get_perms(request)).get("teacherMonitored"):
+        raise HttpError(401, "You're not an admin lol")
+
+
+class NoFreeBlock(HttpError):
+    def __init__(self):
+        super().__init__(405, "No free block is available - you're probably past the 10 min margin")
+
+
+class ModeRequiredForSenior(HttpError):
+    def __init__(self):
+        super().__init__(414, "Since this student is a senior, the mode must be specified.")
+
+
+class InvalidStudent(HttpError):
+    def __init__(self):
+        super().__init__(400, "Invalid Student")
+
+
+class DeviceIdConflict(HttpError):
+    def __init__(self):
+        super().__init__(409, "This device has already been used to check in")

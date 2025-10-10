@@ -1,18 +1,47 @@
+import { useQuery } from "@tanstack/react-query";
+import { NOTIFS_ENABLED_KEY } from "../utils/constants";
 import { fetchBackend } from "./fetchBackend";
 
-export async function disablePushNotifs(email: string) {
+export function usePushNotifs(email: string, deviceId?: string) {
+  const notifsEnabled = useQuery({
+    queryKey: ["notifsEnabled", deviceId],
+    queryFn: async () => {
+      const storedVal = window.localStorage.getItem(NOTIFS_ENABLED_KEY)
+      if (storedVal) return storedVal === "yes" 
+      const res = await fetchBackend("/notifs/enabled/" + deviceId)
+      const enabled = (await res.json())["registered"]
+      window.localStorage.setItem(NOTIFS_ENABLED_KEY, enabled ? "yes" : "no")
+      return enabled
+    },
+    enabled: deviceId != null
+  })
+
+  function setNotifsEnabled(enabled: boolean) {
+    if (deviceId == null) {
+      window.alert("Device ID loading, please wait.")
+      return
+    }
+    enabled ? enablePushNotifs(email, deviceId) : disablePushNotifs(email)
+    window.localStorage.setItem(NOTIFS_ENABLED_KEY, enabled ? "yes" : "no")
+    notifsEnabled.refetch()
+  }
+
+  return { notifsEnabled, setNotifsEnabled }
+}
+
+async function disablePushNotifs(email: string) {
   const res = await fetchBackend("/notifs/unregister/", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
   if (res.status != 200) {
-    console.error("Push notifs WERE NOT DISABLED: " + res.statusText);
+    window.alert("Push notifs WERE NOT DISABLED: " + res.statusText);
   }
 }
 
-export async function enablePushNotifs(email: string) {
+async function enablePushNotifs(email: string, device_id: string) {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.error("Push notifications are not supported.");
+    window.alert("Push notifications are not supported.");
     return;
   }
 
@@ -42,12 +71,12 @@ export async function enablePushNotifs(email: string) {
     // 5. Send the subscription object to the backend
     await fetchBackend("/notifs/register/", {
       method: "POST",
-      body: JSON.stringify({ subscription, email }),
+      body: JSON.stringify({ device_id, subscription, email }),
     });
 
-    console.log("Successfully subscribed to push notifications.");
+    window.alert("Successfully subscribed to push notifications.");
   } catch (error) {
-    console.error("Failed to subscribe to push notifications:", error);
+    window.alert("Failed to subscribe to push notifications:" + error);
   }
 }
 

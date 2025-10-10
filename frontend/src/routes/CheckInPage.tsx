@@ -79,9 +79,7 @@ function CheckInPage() {
             Welcome{status.studentName ? `, ${status.studentName}` : ""}! You
             have just checked in for this block.
           </Text>
-          <Link to="/HomePage" style={{ textDecoration: "none" }}>
-            Return to home page
-          </Link>
+          <Link to="/">Return to home page</Link>
         </>
       );
       break;
@@ -101,7 +99,7 @@ function CheckInPage() {
             {status.msg?.trim() ??
               "An unknown error occurred. Please try again."}
           </Text>
-          <Link to="/HomePage">Return to home page</Link>
+          <Link to="/">Return to home page</Link>
         </>
       );
       break;

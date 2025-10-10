@@ -111,6 +111,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "dev.sqlite3" if DEBUG else "prod.sqlite3",
+    },
+    "lts": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "dev.sqlite3" if DEBUG else "prod.sqlite3",
     }
 }
 
