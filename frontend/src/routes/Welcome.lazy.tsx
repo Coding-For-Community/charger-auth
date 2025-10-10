@@ -14,7 +14,11 @@ function WelcomePage() {
         around campus now have QR codes that you can scan. They all use the ChargerAuth system!
       </Text>
       <Text>
-        You can scan the QR code with just your phone, but 
+        You can scan the QR code with just your phone, but using the dedicated app is a lot faster.
+      </Text>
+      <Title order={2}>Setup instructions: iPhone</Title>
+      <Text>
+        
       </Text>
     </>
   )

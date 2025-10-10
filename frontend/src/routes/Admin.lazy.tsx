@@ -32,13 +32,21 @@ export const Route = createLazyFileRoute("/Admin")({
 });
 
 const SP_MODE = "Senior Privileges";
+const DATE_PROPS = {
+  valueFormat: "DD MMM YY hh:mm A",
+  styles: {
+    input: { width: 95, height: 40 },
+  }
+}
 
 function Admin() {
   const loggedIn = useAdminLoginRedirect();
 
   const [vidsOpened, setVidsOpened] = useState(false);
   const [navbarCollapsedMobile, setNavbarCollapsedMobile] = useState(true);
-  const [mode, setMode] = useState("A");
+  const [mode, setMode] = useState(SP_MODE);
+  const [fromDate, setFromDate] = useState<string | null>(null);
+  const [toDate, setToDate] = useState<string | null>(null);
   const [searchQ, setSearchQ] = useState("");
   const [checkedItems, setCheckedItems] = useState(() => {
     const txt = window.localStorage.getItem("checkedItems");
@@ -46,11 +54,12 @@ function Admin() {
   });
 
   const studentsQ = useQuery({
-    queryKey: ["students", mode],
+    queryKey: ["students", mode, fromDate, toDate],
     queryFn: async () => {
+      
       const res =
         mode === SP_MODE
-          ? await fetchBackend("/checkin/spStudents/")
+          ? await fetchBackend(`/checkin/spStudents/?from_date=${fromDate}&to_date=${toDate}`)
           : await fetchBackend(`/checkin/students/${mode}`);
       return (await res.json()) as any[];
     },
@@ -171,24 +180,39 @@ function Admin() {
           label="Free Period/SP"
           maxDropdownHeight={300}
         />
-        <Text mt={rem(16)} mb={0} fz={14} fw={500}>Search by date & time</Text>
-        <Group gap={2}>
-          <DateTimePicker 
-            w={95}
-            valueFormat="DD MMM YY hh:mm A"
-            styles={{
-              input: { height: 50 }
-            }} 
-          />
-          <Text>-</Text>
-          <DateTimePicker 
-            w={95}
-            valueFormat="DD MMM YY hh:mm A"
-            styles={{
-              input: { height: 50 }
-            }} 
-          />
-        </Group>
+        {
+          mode === SP_MODE &&
+          <>
+            <Group justify="space-between" mt={16} mb={0}>
+              <Text my={0} fz={14} fw={500}>
+                Date & Time Search 
+              </Text>
+              <CloseButton 
+                size="sm" 
+                my={0} 
+                onClick={() => {
+                  setFromDate(null)
+                  setToDate(null)
+                }}
+              />
+            </Group>
+            <Group gap={2} mt={2}>
+              <DateTimePicker 
+                value={fromDate}
+                onChange={setFromDate}
+                size="xs"
+                {...DATE_PROPS}
+              />
+              <Text my={0}>-</Text>
+              <DateTimePicker
+                value={toDate}
+                onChange={setToDate}
+                size="xs"
+                {...DATE_PROPS}
+              />
+            </Group>
+          </>
+        }
         <TextInput
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
@@ -203,7 +227,6 @@ function Admin() {
             variant="outline"
             color="blue"
             radius="lg"
-            onClick={() => studentsQ.refetch()}
             loading={studentsQ.isFetching}
           >
             <IconReload size="20" />

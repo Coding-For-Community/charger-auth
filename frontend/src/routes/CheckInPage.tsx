@@ -39,6 +39,9 @@ function CheckInPage() {
       setInitialLoad(true);
       checkIn(email, fingerprintQ.data, userTokenQ.data).then(setStatus);
     }
+    const promptRerun = () => setInitialLoad(false)
+    window.addEventListener("hashchange", promptRerun);
+    return () => window.removeEventListener("hashchange", promptRerun);
   }, [fingerprintQ.data, userTokenQ.data, initialLoad]);
 
   if (userTokenQ.data === 0 && !evidenceTaken) {
