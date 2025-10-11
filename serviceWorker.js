@@ -15,10 +15,6 @@ self.addEventListener("push", (event) => {
   );
 });
 
-self.addEventListener("message", (event) => {
-  event.respondWith("Hello!!!!!!");
-});
-
 // let deferredPrompt;
 // self.addEventListener('beforeinstallprompt', (e) => {
 //   // Prevent the mini-infobar from appearing on mobile
