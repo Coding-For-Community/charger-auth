@@ -33,8 +33,8 @@ function CheckInPage() {
   function handleCheckIn() {
     if (
       status.status === "ok" ||
-      fingerprintQ.data == null ||
-      userTokenQ.data == null
+      !fingerprintQ.isSuccess ||
+      !userTokenQ.isSuccess
     ) {
       return;
     }
@@ -51,7 +51,7 @@ function CheckInPage() {
     handleCheckIn();
     window.addEventListener("hashchange", handleCheckIn);
     return () => window.removeEventListener("hashchange", handleCheckIn);
-  }, [fingerprintQ.data, userTokenQ.data, vid, mode]);
+  }, [fingerprintQ.isSuccess, userTokenQ.isSuccess, vid, mode]);
 
   if (userTokenQ.data === 0 && !vid) {
     return <SnapEvidence onSend={setVid} />;
@@ -81,7 +81,8 @@ function CheckInPage() {
           </Title>
           <Text ta="center" c="dimmed" mb="md">
             Thanks for checking in
-            {status.studentName ? `, ${status.studentName}` : ""}!
+            {status.studentName ? `, ${status.studentName}` : ""}! <br />
+            {new Date().toLocaleString()} <br />
           </Text>
           <Link to="/" search={{ cooldownStartMs: new Date().getTime() }}>
             Return to home page

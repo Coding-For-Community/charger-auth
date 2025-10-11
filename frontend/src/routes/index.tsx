@@ -76,6 +76,7 @@ function Index() {
       },
     );
     scanner.start();
+    return () => scanner.stop();
   }, [vidRef.current, cooldownOn]);
 
   return (

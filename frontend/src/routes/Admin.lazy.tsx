@@ -18,14 +18,15 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { DateTimePicker } from "@mantine/dates";
 import { useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { fetchBackend } from "../api/fetchBackend.ts";
 import { useAdminLoginRedirect } from "../api/perms.ts";
-import { IconReload, IconSettings2 } from "../components/icons.tsx";
-import { DateTimePicker } from "@mantine/dates";
 import { EvidencePlayer } from "../components/EvidencePlayer.tsx";
+import { IconReload, IconSettings2 } from "../components/icons.tsx";
+import { ManageSeniorPrivileges } from "../components/ManageSeniorPrivileges.tsx";
 
 export const Route = createLazyFileRoute("/Admin")({
   component: Admin,
@@ -35,13 +36,13 @@ const SP_MODE = "Senior Privileges";
 const DATE_PROPS = {
   valueFormat: "DD MMM YY hh:mm A",
   styles: {
-    input: { width: 95, height: 40 },
+    input: { width: 94, height: 40, textAlign: "center" as CanvasTextAlign },
   },
 };
 
 function Admin() {
   const loggedIn = useAdminLoginRedirect();
-
+  const [spManagerOpened, setSpManagerOpened] = useState(false);
   const [vidsOpened, setVidsOpened] = useState(false);
   const [navbarCollapsedMobile, setNavbarCollapsedMobile] = useState(true);
   const [mode, setMode] = useState(SP_MODE);
@@ -49,8 +50,13 @@ function Admin() {
   const [toDate, setToDate] = useState<string | null>(null);
   const [searchQ, setSearchQ] = useState("");
   const [checkedItems, setCheckedItems] = useState(() => {
-    const txt = window.localStorage.getItem("checkedItems");
-    return (txt == null ? [] : JSON.parse(txt)) as string[];
+    try {
+      const txt = window.localStorage.getItem("checkedItems");
+      return (txt == null ? [] : JSON.parse(txt)) as string[];
+    } catch (e) {
+      console.error(e)
+      return []
+    }
   });
 
   const studentsQ = useQuery({
@@ -160,21 +166,16 @@ function Admin() {
         p="md"
         style={{ background: "#f8fafc", borderRight: "1px solid #e9ecef" }}
       >
-        <Group justify="space-between" mb={rem(8)}>
-          <Title order={4} c="gray.7">
-            Options
-          </Title>
-          <CloseButton
-            hiddenFrom="sm"
-            onClick={() => setNavbarCollapsedMobile(true)}
-          />
-        </Group>
+        <Title order={4} c="gray.7" mb={rem(4)}>
+          Options
+        </Title>
         <Divider mb={rem(12)} />
         <Select
           data={["A", "B", "C", "D", "E", "F", "G", SP_MODE]}
           value={mode}
           onChange={(block) => {
             if (block == null) return;
+            setCheckedItems([]);
             setMode(block);
           }}
           maw={rem(200)}
@@ -183,13 +184,15 @@ function Admin() {
         />
         {mode === SP_MODE && (
           <>
-            <Group justify="space-between" mt={16} mb={0}>
+            <Group  mt={16} mb={0}>
               <Text my={0} fz={14} fw={500}>
                 Date & Time Search
               </Text>
               <CloseButton
                 size="sm"
                 my={0}
+                ml="auto"
+                mr={3}
                 onClick={() => {
                   setFromDate(null);
                   setToDate(null);
@@ -201,12 +204,14 @@ function Admin() {
                 value={fromDate}
                 onChange={setFromDate}
                 size="xs"
+                placeholder="Start Date"
                 {...DATE_PROPS}
               />
               <Text my={0}>-</Text>
               <DateTimePicker
                 value={toDate}
                 onChange={setToDate}
+                placeholder="End Date"
                 size="xs"
                 {...DATE_PROPS}
               />
@@ -239,6 +244,9 @@ function Admin() {
         <Stack gap={rem(10)}>
           <Button bg="yellow" onClick={() => setVidsOpened(true)}>
             Open Tentative Videos
+          </Button>
+          <Button onClick={() => setSpManagerOpened(true)}>
+            Manage Senior Privileges
           </Button>
           <Button bg="red" onClick={forceReset}>
             Force Reset
@@ -308,6 +316,13 @@ function Admin() {
         }}
         freeBlock={mode}
         students={findStudents("tentative")}
+      />
+
+      <ManageSeniorPrivileges
+        opened={spManagerOpened}
+        onClose={() => setSpManagerOpened(false)}
+        seniors={studentsQ.data?.filter((s) => s.is_senior).map((s) => s.name) ?? []}
+        initiallyEnabled={studentsQ.data?.filter((s) => s.has_sp).map((s) => s.name) ?? []}
       />
     </AppShell>
   );

@@ -70,32 +70,14 @@ export async function parseCheckInRes(res: Response): Promise<CheckInResult> {
     case 200:
       return { status: "ok", studentName: (await res.json())["studentName"] };
     case 400:
-      return {
-        status: "err",
-        msg: "Invalid Student ID/Email - maybe close and re-open ChargerAuth?",
-      };
-    case 401:
-      return {
-        status: "err",
-        msg: "This is not your fault - scanner app not logged in.",
-      };
-    case 405:
-      return {
-        status: "err",
-        msg: "You don't seem to have a free period right now.",
-      };
-    case 409:
-      return {
-        status: "err",
-        msg: "This device has already checked in a user for this free period.",
-      };
-    case 414:
-      return { status: "modeNeeded" };
-    case 416:
-      return {
-        status: "err",
-        msg: "You're trying to check back in for senior privileges, but you haven't checked out yet.",
-      };
+      try {
+        const data = await res.json()
+        console.log("400 DATA: ", data);
+        if (data["err_code"] == 2) return { status: "modeNeeded" };
+        return { status: "err", msg: data["msg"] };
+      } catch {
+        return { status: "err", msg: "Unhandled 4xx error." };
+      }
     default:
       return { status: "err", msg: "Invalid status code: " + res.status };
   }
