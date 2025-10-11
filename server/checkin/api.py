@@ -6,21 +6,31 @@ import asyncio
 import logging
 import uuid
 import ninja
-import pytz
 
 from asgiref.sync import sync_to_async
+from django.contrib.auth import aauthenticate, alogin
 from django.db import IntegrityError
 from django.db.models import Prefetch
+from django.http import HttpRequest, FileResponse
+from ninja import UploadedFile, File
+from ninja.errors import HttpError
+from ninja.throttling import AuthRateThrottle
 
 from checkin.core.api_methods import (
     get_curr_free_block,
     get_next_free_block,
-    parse_email, DeviceIdConflict, get_checkin_record, get_emails_from_grad_year, get_perms, throw_if_not_admin,
+    parse_email,
+    DeviceIdConflict,
+    get_checkin_record,
+    get_emails_from_grad_year,
+    get_perms,
+    throw_if_not_admin,
+    fmt_eastern_date,
 )
 from checkin.core.compress_video import compress_video
+from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock
 from checkin.core.get_now import get_now
 from checkin.core.random_token_manager import RandomTokenManager
-from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import Student, PersistentState, FreePeriodCheckIn, SeniorPrivilegeCheckIn
 from checkin.schema import (
     CheckInSchema,
@@ -28,12 +38,6 @@ from checkin.schema import (
     ManualCheckInSchema,
     TentativeCheckInSchema,
 )
-from django.contrib.auth import aauthenticate, alogin
-from django.http import HttpRequest, FileResponse
-from ninja import UploadedFile, File
-from ninja.errors import HttpError
-from ninja.throttling import AuthRateThrottle
-
 from config import settings
 
 router = ninja.Router()
@@ -41,7 +45,6 @@ router = ninja.Router()
 kiosk_token_manager = RandomTokenManager(interval_secs=5)
 user_tokens = []
 user_tokens_lock = asyncio.Lock()
-us_eastern = pytz.timezone('America/New_York')
 logger = logging.getLogger(__name__)
 
 
@@ -110,29 +113,32 @@ async def fetch_students(request, free_block: FreeBlock):
 
 
 @router.get("/spStudents/")
-async def fetch_sp_students(request):
+async def fetch_sp_students(request, from_date=None, to_date=None):
+    now_date = get_now().date()
+    from_date = fmt_eastern_date(from_date)
+    to_date = fmt_eastern_date(to_date)
+
     output = []
     records = SeniorPrivilegeCheckIn.objects.select_related("student")
-    async for record in records.all():
-        status = f"{"tentative" if record.video else "checked"}_{"out" if record.checked_out else "in"}"
-        date_fmt = f"{record.check_out_date.astimezone(us_eastern).strftime("%I:%M %p")}"
-        if record.check_in_date:
-            date_fmt += f" - {record.check_in_date.astimezone(us_eastern).strftime("%I:%M %p")}"
-        output.append({
-            "name": record.student.name,
-            "email": record.student.email,
-            "status": status,
-            "date_str": date_fmt
-        })
+    if from_date:
+        records = records.filter(check_out_date__gte=from_date)
+    if to_date:
+        records = records.filter(check_in_date__lte=to_date)
+    async for r in records.all():
+        output.append(r.dict())
+    if (from_date and from_date.date() != now_date) or (to_date and to_date.date() != now_date):
+        async for r in records.using('lts').all():
+            output.append(r.dict())
     return output
 
 
 @router.get("/studentVid/")
 async def student_vid(request, free_block: FreeBlock, email: str):
-    student = await Student.objects.filter(email=email.lower()).afirst()
-    if not student:
-        raise HttpError(400, "Invalid Student")
-    record = await FreePeriodCheckIn.objects.filter(video__isnull=False).afirst()
+    record = await FreePeriodCheckIn.objects.filter(
+        free_block_idx=ALL_FREE_BLOCKS.index(free_block),
+        student__email=email.lower(),
+        video__isnull=False,
+    ).afirst()
     if not record:
         raise HttpError(402, "No Video found")
     file = record.video.file
@@ -157,6 +163,7 @@ async def perms_endpoint(request):
 @router.post("/run/")
 async def check_in_student(request, data: CheckInSchema):
     if data.user_token not in user_tokens:
+        logger.info(f"USER TOKEN: {data.user_token}")
         raise HttpError(
             403,
             "Check-In Token invalid - use runTentative with a video."
@@ -180,10 +187,10 @@ async def check_in_student_tentative(
         input_data.mode,
         input_data.device_id
     )
-    raw_video.name = f"{student.name}-{input_data.mode}.webm"
-    with compress_video(raw_video) as video_file:
-        await sync_to_async(record.video.save)(video_file.name, video_file)
     try:
+        raw_video.name = f"{student.name}-{record.name()}.webm"
+        with compress_video(raw_video) as video_file:
+            await sync_to_async(record.video.save)(video_file.name, video_file)
         await record.asave()
     except IntegrityError:
         raise DeviceIdConflict
@@ -250,8 +257,15 @@ async def enable_senior_privileges(request, enable_for: str | None = None):
 
 
 @router.post("/disableSp/")
-async def disable_senior_privileges(request):
+async def disable_senior_privileges(request, email: str | None = None):
     await throw_if_not_admin(request)
+    if email:
+        student = await Student.objects.filter(email=email.lower()).afirst()
+        if student is None:
+            raise HttpError(400, "Student does not exist")
+        student.has_sp = False
+        await student.asave()
+        return {"success": True}
     async for student in Student.objects.filter(has_sp=True):
         student.has_sp = False
         await student.asave()
@@ -271,7 +285,7 @@ if settings.DEBUG:
             characters = string.ascii_letters + string.digits
 
             # Use random.choice to select characters and join them
-            random_string = ''.join(random.choice(characters) for i in range(length))
+            random_string = ''.join(random.choice(characters) for _ in range(length))
             return random_string
 
         for i in range(500):
@@ -287,4 +301,3 @@ if settings.DEBUG:
     async def remove_unknowns(request):
         await Student.objects.filter(name__contains="[Unknown]").adelete()
         return "Yeah i just did a thing"
-

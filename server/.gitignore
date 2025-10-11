@@ -1,9 +1,10 @@
 .venv
 __pycache__
 staticfiles
-dev.sqlite3
-dev.sqlite3-shm
-dev.sqlite3-wal
+dev.sqlite3*
+lts.dev.sqlite3*
+prod.sqlite3*
+lts.prod.sqlite3*
 .env
 media/
 logutil/main.log.1

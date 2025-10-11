@@ -1,5 +1,5 @@
 from ninja import Schema
-from checkin.core.types import FreeBlock, CheckInOption
+from checkin.core.consts import FreeBlock, CheckInOption
 
 
 # Unlike models (which are basically SQL/database representations)

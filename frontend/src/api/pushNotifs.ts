@@ -6,27 +6,27 @@ export function usePushNotifs(email: string, deviceId?: string) {
   const notifsEnabled = useQuery({
     queryKey: ["notifsEnabled", deviceId],
     queryFn: async () => {
-      const storedVal = window.localStorage.getItem(NOTIFS_ENABLED_KEY)
-      if (storedVal) return storedVal === "yes" 
-      const res = await fetchBackend("/notifs/enabled/" + deviceId)
-      const enabled = (await res.json())["registered"]
-      window.localStorage.setItem(NOTIFS_ENABLED_KEY, enabled ? "yes" : "no")
-      return enabled
+      const storedVal = window.localStorage.getItem(NOTIFS_ENABLED_KEY);
+      if (storedVal) return storedVal === "yes";
+      const res = await fetchBackend("/notifs/enabled/" + deviceId);
+      const enabled = (await res.json())["registered"];
+      window.localStorage.setItem(NOTIFS_ENABLED_KEY, enabled ? "yes" : "no");
+      return enabled;
     },
-    enabled: deviceId != null
-  })
+    enabled: deviceId != null,
+  });
 
   function setNotifsEnabled(enabled: boolean) {
     if (deviceId == null) {
-      window.alert("Device ID loading, please wait.")
-      return
+      window.alert("Device ID loading, please wait.");
+      return;
     }
-    enabled ? enablePushNotifs(email, deviceId) : disablePushNotifs(email)
-    window.localStorage.setItem(NOTIFS_ENABLED_KEY, enabled ? "yes" : "no")
-    notifsEnabled.refetch()
+    enabled ? enablePushNotifs(email, deviceId) : disablePushNotifs(email);
+    window.localStorage.setItem(NOTIFS_ENABLED_KEY, enabled ? "yes" : "no");
+    notifsEnabled.refetch();
   }
 
-  return { notifsEnabled, setNotifsEnabled }
+  return { notifsEnabled, setNotifsEnabled };
 }
 
 async function disablePushNotifs(email: string) {

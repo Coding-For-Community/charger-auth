@@ -6,8 +6,10 @@ from django.core.validators import RegexValidator
 from django.db import models
 from pydantic import ValidationError
 from solo.models import SingletonModel
-
-from checkin.core.types import FreeBlock, ALL_FREE_BLOCKS
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+import os
+from checkin.core.consts import FreeBlock, ALL_FREE_BLOCKS, US_EASTERN
 
 
 class Student(models.Model):
@@ -47,14 +49,8 @@ class FreePeriodCheckIn(models.Model):
     def set_block(self, value: FreeBlock):
         self.free_block_idx = ALL_FREE_BLOCKS.index(value)
 
-    @override
-    def save(self, *args, **kwargs):
-        if self.device_id and self.video:
-            raise ValidationError("You cannot provide both 'device_id' and 'video'. Both cannot be blank.")
-
-        if not self.device_id and not self.video:
-            raise ValidationError("You must provide one of 'device_id' or 'video'. Both cannot be blank.")
-        super().save(*args, **kwargs)
+    def name(self):
+        return f"free_period_{self.block()}"
 
     class Meta:
         constraints = [
@@ -83,9 +79,31 @@ class SeniorPrivilegeCheckIn(models.Model):
     check_in_date = models.DateTimeField(null=True)
     video = models.FileField(upload_to="checkin_vids/", blank=True)
 
-    async def astudent(self):
-        return await sync_to_async(lambda: self.student)()
+    def name(self):
+        return "sp_check_out" if self.checked_out else "sp_check_in"
 
+    def dict(self):
+        """
+        Fetches a dict representation of this model.
+        To call this method, you must use select_related('students') in the iterator clause.
+        """
+        status = f"{"tentative" if self.video else "checked"}_{"out" if self.checked_out else "in"}"
+        date_fmt = f"{self.check_out_date.astimezone(US_EASTERN).strftime("%I:%M %p")}"
+        if self.check_in_date:
+            date_fmt += f" - {self.check_in_date.astimezone(US_EASTERN).strftime("%I:%M %p")}"
+        return {
+            "name": self.student.name,
+            "email": self.student.email,
+            "status": status,
+            "date_str": date_fmt
+        }
+
+
+@receiver(post_delete, sender=SeniorPrivilegeCheckIn)
+@receiver(post_delete, sender=FreePeriodCheckIn)
+def auto_delete_videos(sender, instance, **kwargs):
+    if instance.video and os.path.isfile(instance.video.path):
+        os.remove(instance.video.path)
 
 
 class FreeBlockToday(models.Model):

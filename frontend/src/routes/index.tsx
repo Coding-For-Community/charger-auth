@@ -13,13 +13,19 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import QrScanner from "qr-scanner";
 import { useEffect, useRef, useState } from "react";
+import { useFingerprint } from "../api/checkIn";
 import { useLoginRedirect } from "../api/perms";
 import { usePushNotifs } from "../api/pushNotifs";
 import { IconSettings2 } from "../components/icons";
-import { useFingerprint } from "../api/checkIn";
 
 export const Route = createFileRoute("/")({
   component: Index,
+  validateSearch: (search: Record<string, unknown>) => {
+    const msVal = parseInt(search.cooldownStartMs as string);
+    return {
+      cooldownStartMs: isNaN(msVal) ? null : msVal,
+    };
+  },
 });
 
 function Index() {
@@ -28,10 +34,26 @@ function Index() {
   const navigate = useNavigate();
   const vidRef = useRef<HTMLVideoElement | null>(null);
   const deviceIdQ = useFingerprint();
-  const { notifsEnabled, setNotifsEnabled } = usePushNotifs(email, deviceIdQ.data)
+  const { cooldownStartMs } = Route.useSearch();
+  const [cooldownOn, setCooldownOn] = useState(true);
+  const { notifsEnabled, setNotifsEnabled } = usePushNotifs(
+    email,
+    deviceIdQ.data,
+  );
 
   useEffect(() => {
-    if (vidRef.current == null) return;
+    if (!cooldownStartMs) {
+      setCooldownOn(false);
+      return;
+    }
+    const elapsedSinceFetch = new Date().getTime() - cooldownStartMs;
+    const ms = Math.max(1, 4000 - elapsedSinceFetch);
+    const handle = setTimeout(() => setCooldownOn(false), ms);
+    return () => clearTimeout(handle);
+  }, []);
+
+  useEffect(() => {
+    if (vidRef.current == null || cooldownOn) return;
     const scanner = new QrScanner(
       vidRef.current,
       (res) => {
@@ -54,7 +76,7 @@ function Index() {
       },
     );
     scanner.start();
-  }, [vidRef.current]);
+  }, [vidRef.current, cooldownOn]);
 
   return (
     <AppShell>

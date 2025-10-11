@@ -36,8 +36,8 @@ const DATE_PROPS = {
   valueFormat: "DD MMM YY hh:mm A",
   styles: {
     input: { width: 95, height: 40 },
-  }
-}
+  },
+};
 
 function Admin() {
   const loggedIn = useAdminLoginRedirect();
@@ -56,10 +56,11 @@ function Admin() {
   const studentsQ = useQuery({
     queryKey: ["students", mode, fromDate, toDate],
     queryFn: async () => {
-      
       const res =
         mode === SP_MODE
-          ? await fetchBackend(`/checkin/spStudents/?from_date=${fromDate}&to_date=${toDate}`)
+          ? await fetchBackend(
+              `/checkin/spStudents/?from_date=${fromDate}&to_date=${toDate}`,
+            )
           : await fetchBackend(`/checkin/students/${mode}`);
       return (await res.json()) as any[];
     },
@@ -180,24 +181,23 @@ function Admin() {
           label="Free Period/SP"
           maxDropdownHeight={300}
         />
-        {
-          mode === SP_MODE &&
+        {mode === SP_MODE && (
           <>
             <Group justify="space-between" mt={16} mb={0}>
               <Text my={0} fz={14} fw={500}>
-                Date & Time Search 
+                Date & Time Search
               </Text>
-              <CloseButton 
-                size="sm" 
-                my={0} 
+              <CloseButton
+                size="sm"
+                my={0}
                 onClick={() => {
-                  setFromDate(null)
-                  setToDate(null)
+                  setFromDate(null);
+                  setToDate(null);
                 }}
               />
             </Group>
             <Group gap={2} mt={2}>
-              <DateTimePicker 
+              <DateTimePicker
                 value={fromDate}
                 onChange={setFromDate}
                 size="xs"
@@ -212,7 +212,7 @@ function Admin() {
               />
             </Group>
           </>
-        }
+        )}
         <TextInput
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
@@ -260,15 +260,14 @@ function Admin() {
           grow
           style={{ height: "calc(100vh - 150px)" }}
         >
-          {
-            mode === SP_MODE &&
+          {mode === SP_MODE && (
             <ColumnPanel
               title={"Checked Out"}
               color="red"
               students={findStudents("checked_out")}
               {...defaultColProps}
             />
-          }
+          )}
           <ColumnPanel
             title={"Checked In"}
             color="green"
@@ -279,7 +278,7 @@ function Admin() {
             title={mode === SP_MODE ? "Tentative(Out)" : "Tentative"}
             color="yellow"
             students={findStudents(
-              mode === SP_MODE ? "tentative_out" : "tentative" 
+              mode === SP_MODE ? "tentative_out" : "tentative",
             )}
             {...defaultColProps}
           />
@@ -392,11 +391,14 @@ function StudentListing(props: {
     >
       <Group justify="space-between" align="center">
         <Stack gap={5}>
-          <Title order={5} fw={600}>{props.name}</Title>
-          {
-            props.dateStr &&
-            <Text size="sm" c="gray.6" m={0}>({props.dateStr})</Text>
-          }
+          <Title order={5} fw={600}>
+            {props.name}
+          </Title>
+          {props.dateStr && (
+            <Text size="sm" c="gray.6" m={0}>
+              ({props.dateStr})
+            </Text>
+          )}
         </Stack>
         {props.hasCheckbox && (
           <Checkbox

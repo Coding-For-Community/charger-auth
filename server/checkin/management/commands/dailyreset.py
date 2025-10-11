@@ -2,11 +2,12 @@ import asyncio
 import logging
 import os
 import schedule
+from asgiref.sync import sync_to_async
 
 from django.core.management import BaseCommand
 from pywebpush import webpush, WebPushException
 from checkin.core.get_now import get_now
-from checkin.core.types import ALL_FREE_BLOCKS, FreeBlock
+from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import (
     Student,
     FreeBlockToday,
@@ -79,7 +80,7 @@ class Command(BaseCommand):
                     f"/academics/schedules/master?"
                     f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
                 ),
-                Student.objects.all().aupdate(free_blocks=""),
+                Student.objects.all().aupdate(free_blocks=0),
                 FreePeriodCheckIn.objects.all().adelete(),
                 _save_sp_data_to_lts(),
             )
@@ -177,7 +178,10 @@ class Command(BaseCommand):
 
 async def _save_sp_data_to_lts():
     items = SeniorPrivilegeCheckIn.objects.all()
-    item_list = [item async for item in items]
+    item_list = []
+    async for item in items:
+        item_list.append(item)
+        item.video = ''
     await items.adelete()
     asyncio.create_task(
         SeniorPrivilegeCheckIn.objects.using("lts").abulk_create(

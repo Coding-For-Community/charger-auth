@@ -7,7 +7,7 @@ from future.backports.datetime import timezone
 from ninja.errors import HttpError
 
 from checkin.core.get_now import get_now
-from checkin.core.types import FreeBlock, CheckInOption
+from checkin.core.consts import FreeBlock, CheckInOption, US_EASTERN
 from checkin.models import FreeBlockToday, Student, FreePeriodCheckIn, SeniorPrivilegeCheckIn
 from oauth.api import oauth_client
 
@@ -116,6 +116,15 @@ async def get_perms(request: HttpRequest):
 async def throw_if_not_admin(request: HttpRequest):
     if not (await get_perms(request)).get("teacherMonitored"):
         raise HttpError(401, "You're not an admin lol")
+
+
+def fmt_eastern_date(text: str | None):
+    return (
+        datetime
+            .strptime(text, "%Y-%m-%d %H:%M:%S")
+            .astimezone(US_EASTERN)
+            if text and text != "null" else None
+    )
 
 
 class NoFreeBlock(HttpError):

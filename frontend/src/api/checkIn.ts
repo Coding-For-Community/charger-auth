@@ -41,10 +41,10 @@ export function useFingerprint() {
 
 export async function checkIn(
   email: string,
-  device_id: string,
+  device_id?: string,
+  mode?: ModeOption,
   user_token?: string,
   vidFile?: File,
-  mode?: ModeOption,
 ): Promise<CheckInResult> {
   const body = JSON.stringify({ email, mode, device_id, user_token });
   console.log("BODY: " + body);

@@ -6,6 +6,7 @@ import {
   useFingerprint,
   useUserToken,
   type CheckInResult,
+  type ModeOption,
 } from "../api/checkIn.ts";
 import { useLoginRedirect } from "../api/perms.ts";
 import { IconAlertTriangle, IconCheck } from "../components/icons.tsx";
@@ -22,38 +23,38 @@ const ModeSelect = lazy(() => import(`../components/ModeSelect.tsx`));
 
 function CheckInPage() {
   const [status, setStatus] = useState<CheckInResult>({ status: "loading" });
-  const [initialLoad, setInitialLoad] = useState(false);
-  const [evidenceTaken, setEvidenceTaken] = useState(false);
+  const [mode, setMode] = useState<ModeOption | undefined>(undefined);
+  const [vid, setVid] = useState<File | undefined>(undefined);
   const { email } = useLoginRedirect();
   const { kioskToken } = Route.useSearch();
   const userTokenQ = useUserToken(kioskToken);
   const fingerprintQ = useFingerprint();
 
-  useEffect(() => {
+  function handleCheckIn() {
     if (
-      !initialLoad &&
-      fingerprintQ.data &&
-      userTokenQ.data &&
-      userTokenQ.data !== 0
+      status.status === "ok" ||
+      fingerprintQ.data == null ||
+      userTokenQ.data == null
     ) {
-      setInitialLoad(true);
-      checkIn(email, fingerprintQ.data, userTokenQ.data).then(setStatus);
+      return;
     }
-    const promptRerun = () => setInitialLoad(false)
-    window.addEventListener("hashchange", promptRerun);
-    return () => window.removeEventListener("hashchange", promptRerun);
-  }, [fingerprintQ.data, userTokenQ.data, initialLoad]);
+    if (userTokenQ.data === 0) {
+      if (vid == null) return;
+      checkIn(email, fingerprintQ.data, mode, undefined, vid).then(setStatus);
+    } else {
+      checkIn(email, fingerprintQ.data, mode, userTokenQ.data).then(setStatus);
+    }
+    setStatus({ status: "loading" });
+  }
 
-  if (userTokenQ.data === 0 && !evidenceTaken) {
-    return (
-      <SnapEvidence
-        onSend={(file) => {
-          setEvidenceTaken(true);
-          setStatus({ status: "loading" });
-          checkIn(email, fingerprintQ.data!, undefined, file).then(setStatus);
-        }}
-      />
-    );
+  useEffect(() => {
+    handleCheckIn();
+    window.addEventListener("hashchange", handleCheckIn);
+    return () => window.removeEventListener("hashchange", handleCheckIn);
+  }, [fingerprintQ.data, userTokenQ.data, vid, mode]);
+
+  if (userTokenQ.data === 0 && !vid) {
+    return <SnapEvidence onSend={setVid} />;
   }
 
   let content = <></>;
@@ -79,10 +80,12 @@ function CheckInPage() {
             Check-in Successful!
           </Title>
           <Text ta="center" c="dimmed" mb="md">
-            Welcome{status.studentName ? `, ${status.studentName}` : ""}! You
-            have just checked in for this block.
+            Thanks for checking in
+            {status.studentName ? `, ${status.studentName}` : ""}!
           </Text>
-          <Link to="/">Return to home page</Link>
+          <Link to="/" search={{ cooldownStartMs: new Date().getTime() }}>
+            Return to home page
+          </Link>
         </>
       );
       break;
@@ -102,25 +105,14 @@ function CheckInPage() {
             {status.msg?.trim() ??
               "An unknown error occurred. Please try again."}
           </Text>
-          <Link to="/">Return to home page</Link>
+          <Link to="/" search={{ cooldownStartMs: null }}>
+            Return to home page
+          </Link>
         </>
       );
       break;
     case "modeNeeded":
-      return (
-        <ModeSelect
-          onSelect={(mode) => {
-            setStatus({ status: "loading" });
-            checkIn(
-              email,
-              fingerprintQ.data!,
-              userTokenQ.data!,
-              undefined,
-              mode,
-            ).then(setStatus);
-          }}
-        />
-      );
+      return <ModeSelect onSelect={setMode} />;
   }
 
   return (

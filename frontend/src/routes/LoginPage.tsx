@@ -9,8 +9,7 @@ import { EMAIL_KEY } from "../utils/constants";
 export const Route = createFileRoute("/LoginPage")({
   component: LoginPage,
   validateSearch: (search: Record<string, unknown>) => ({
-    redirectUrl:
-      (search.redirectUrl as string)?.replace("#", "") ?? "/",
+    redirectUrl: (search.redirectUrl as string)?.replace("#", "") ?? "/",
   }),
 });
 
