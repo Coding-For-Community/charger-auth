@@ -1,10 +1,7 @@
-from typing import override
-
 from asgiref.sync import sync_to_async
 from bitfield import BitField
 from django.core.validators import RegexValidator
 from django.db import models
-from pydantic import ValidationError
 from solo.models import SingletonModel
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
@@ -21,6 +18,8 @@ class Student(models.Model):
     free_blocks = BitField(flags=ALL_FREE_BLOCKS, default=0)
     name = models.CharField(max_length=100, default="[Unknown]")
     has_sp = models.BooleanField(default=False)
+    # is_senior = models.BooleanField(default=False)
+    # sp_revoked = models.BooleanField(default=True)
 
 
 class FreePeriodCheckIn(models.Model):

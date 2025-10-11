@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 
 from django.http import HttpRequest
 from future.backports.datetime import timezone
-from ninja.errors import HttpError
 
+from checkin.core.errors import DeviceIdConflict, InvalidStudent, ModeRequiredForSenior, NoFreeBlock, UseEmailInstead, \
+    InvalidAdminPerms, HasNotCheckedOut
 from checkin.core.get_now import get_now
 from checkin.core.consts import FreeBlock, CheckInOption, US_EASTERN
 from checkin.models import FreeBlockToday, Student, FreePeriodCheckIn, SeniorPrivilegeCheckIn
@@ -45,13 +46,13 @@ async def parse_email(email_or_id: str):
     try:
         res = await client.get(f"/users/{email_or_id}")
         if res.status_code == 429:
-            raise HttpError(418, "Use your email instead")
+            raise UseEmailInstead
         email = res.json().get("email")
         if not email:
-            raise HttpError(400, "Invalid student ID")
+            raise InvalidStudent
         return email.lower()
     except ValueError:
-        raise HttpError(400, "Invalid student ID or email")
+        raise InvalidStudent
 
 
 async def get_checkin_record(email: str, mode: CheckInOption, device_id: str) -> tuple[
@@ -77,7 +78,7 @@ async def get_checkin_record(email: str, mode: CheckInOption, device_id: str) ->
     elif is_sp_mode:
         record = await SeniorPrivilegeCheckIn.objects.filter(student__email=email).afirst()
         if record and not record.checked_out and mode == "sp_check_in":
-            raise HttpError(416, "Senior has not checked in yet.")
+            raise HasNotCheckedOut
         if not record:
             record = SeniorPrivilegeCheckIn(student=student)
         elif record.device_id != device_id:
@@ -115,7 +116,7 @@ async def get_perms(request: HttpRequest):
 
 async def throw_if_not_admin(request: HttpRequest):
     if not (await get_perms(request)).get("teacherMonitored"):
-        raise HttpError(401, "You're not an admin lol")
+        raise InvalidAdminPerms
 
 
 def fmt_eastern_date(text: str | None):
@@ -125,23 +126,3 @@ def fmt_eastern_date(text: str | None):
             .astimezone(US_EASTERN)
             if text and text != "null" else None
     )
-
-
-class NoFreeBlock(HttpError):
-    def __init__(self):
-        super().__init__(405, "No free block is available - you're probably past the 10 min margin")
-
-
-class ModeRequiredForSenior(HttpError):
-    def __init__(self):
-        super().__init__(414, "Since this student is a senior, the mode must be specified.")
-
-
-class InvalidStudent(HttpError):
-    def __init__(self):
-        super().__init__(400, "Invalid Student")
-
-
-class DeviceIdConflict(HttpError):
-    def __init__(self):
-        super().__init__(409, "This device has already been used to check in")

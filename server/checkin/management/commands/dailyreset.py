@@ -29,7 +29,6 @@ class Command(BaseCommand):
         super().__init__()
         load_dotenv()
         self.free_blocks_today: dict[FreeBlock, time] = {}
-        self.reset_count = 0
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -55,13 +54,12 @@ class Command(BaseCommand):
         while True:
             schedule.run_pending()
             _, bg_reqs = await asyncio.gather(asyncio.sleep(1), PersistentState.aget())
-            if bg_reqs and bg_reqs.desire_manual_reset and self.reset_count < 3:
+            if bg_reqs and bg_reqs.desire_manual_reset:
                 logger.info("Manual reset requested.")
                 await Student.objects.all().adelete()
                 await self.daily_reset(False)
                 bg_reqs.desire_manual_reset = False
                 await bg_reqs.asave()
-                self.reset_count += 1
 
     async def daily_reset(self, reset_state: bool):
         """

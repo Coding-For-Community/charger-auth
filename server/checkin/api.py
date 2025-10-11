@@ -20,7 +20,6 @@ from checkin.core.api_methods import (
     get_curr_free_block,
     get_next_free_block,
     parse_email,
-    DeviceIdConflict,
     get_checkin_record,
     get_emails_from_grad_year,
     get_perms,
@@ -29,6 +28,7 @@ from checkin.core.api_methods import (
 )
 from checkin.core.compress_video import compress_video
 from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock
+from checkin.core.errors import InvalidFreeBlock, DeviceIdConflict, InvalidToken, NoVideoFound, InvalidStudent
 from checkin.core.get_now import get_now
 from checkin.core.random_token_manager import RandomTokenManager
 from checkin.models import Student, PersistentState, FreePeriodCheckIn, SeniorPrivilegeCheckIn
@@ -50,9 +50,10 @@ logger = logging.getLogger(__name__)
 
 @router.get("/kioskToken/")
 async def token_for_kiosk(request: HttpRequest):
-    _, curr_free_block = await asyncio.gather(
-        throw_if_not_admin(request), get_curr_free_block()
-    )
+    # _, curr_free_block = await asyncio.gather(
+    #     throw_if_not_admin(request), get_curr_free_block()
+    # )
+    curr_free_block = await get_curr_free_block()
     token = kiosk_token_manager.get()
     token["curr_free_block"] = curr_free_block
     if curr_free_block is None:
@@ -66,7 +67,7 @@ async def token_for_kiosk(request: HttpRequest):
 @router.get("/userToken/")
 async def token_for_student(request, kiosk_token: str):
     if not kiosk_token_manager.validate(kiosk_token):
-        raise HttpError(403, "Invalid kiosk token")
+        raise InvalidToken
     token = str(uuid.uuid4())
     async with user_tokens_lock:
         user_tokens.append(token)
@@ -85,7 +86,7 @@ def senior_year(request):
 @router.get("/students/{free_block}/")
 async def fetch_students(request, free_block: FreeBlock):
     if free_block not in ALL_FREE_BLOCKS:
-        raise HttpError(400, "Invalid free block: " + free_block)
+        raise InvalidFreeBlock
     output = []
     records_prefetch = Prefetch(
         "fp_records",
@@ -140,7 +141,7 @@ async def student_vid(request, free_block: FreeBlock, email: str):
         video__isnull=False,
     ).afirst()
     if not record:
-        raise HttpError(402, "No Video found")
+        raise NoVideoFound
     file = record.video.file
     return FileResponse(file.open(), as_attachment=True, filename=file.name)
 
@@ -164,10 +165,7 @@ async def perms_endpoint(request):
 async def check_in_student(request, data: CheckInSchema):
     if data.user_token not in user_tokens:
         logger.info(f"USER TOKEN: {data.user_token}")
-        raise HttpError(
-            403,
-            "Check-In Token invalid - use runTentative with a video."
-        )
+        raise InvalidToken
     record, student = await get_checkin_record(data.email, data.mode, data.device_id)
     try:
         await record.asave()
@@ -262,7 +260,7 @@ async def disable_senior_privileges(request, email: str | None = None):
     if email:
         student = await Student.objects.filter(email=email.lower()).afirst()
         if student is None:
-            raise HttpError(400, "Student does not exist")
+            raise InvalidStudent
         student.has_sp = False
         await student.asave()
         return {"success": True}
@@ -275,22 +273,8 @@ async def disable_senior_privileges(request, email: str | None = None):
 if settings.DEBUG:
     @router.get("/test/addLotsOfStudents/")
     async def add_lots_of_students(request):
-        import random
-        import string
-
-        def generate_random_string(length):
-            # Define the pool of characters to choose from
-            # string.ascii_letters includes both lowercase and uppercase letters
-            # string.digits includes numbers 0-9
-            characters = string.ascii_letters + string.digits
-
-            # Use random.choice to select characters and join them
-            random_string = ''.join(random.choice(characters) for _ in range(length))
-            return random_string
-
         for i in range(500):
-            random_str = generate_random_string(15)
-            student = Student(email=random_str + "@caryacademy.org")
+            student = Student(email=f"student_{i}@caryacademy.org")
             if i < 80:
                 student.free_blocks.A = True
                 student.name += "WithA"

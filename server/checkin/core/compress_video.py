@@ -4,6 +4,7 @@ import os
 from contextlib import contextmanager
 from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import UploadedFile
+from checkin.core.errors import InvalidVideo
 
 storage = FileSystemStorage()
 
@@ -19,18 +20,21 @@ def compress_video(video: UploadedFile):
     output_filename = f"compressed/{os.path.splitext(video.name)[0]}_compressed.webm"
     output_path = os.path.join(storage.location, output_filename)
 
-    (
-        ffmpeg.input(temp_path)
-        .output(
-            output_path,
-            crf=28,  # Constant Rate Factor: 0 (lossless) to 51 (worst quality), 28 is a good balance
-            an=None,
-            sn=None,
-            loglevel="error",
-            vf="scale=-2:240",  # Reduce resolution to 240p (maintains aspect ratio)
+    try:
+        (
+            ffmpeg.input(temp_path)
+            .output(
+                output_path,
+                crf=28,  # Constant Rate Factor: 0 (lossless) to 51 (worst quality), 28 is a good balance
+                an=None,
+                sn=None,
+                loglevel="error",
+                vf="scale=-2:240",  # Reduce resolution to 240p (maintains aspect ratio)
+            )
+            .run()
         )
-        .run()
-    )
+    except:
+        raise InvalidVideo
 
     output_file = open(output_path, "rb")
     django_file_obj = UploadedFile(
