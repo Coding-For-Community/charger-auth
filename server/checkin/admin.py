@@ -4,7 +4,9 @@ from django.contrib import admin
 from checkin.models import (
     Student,
     FreeBlockToday,
-    PersistentState, FreePeriodCheckIn, SeniorPrivilegeCheckIn,
+    FreePeriodCheckIn,
+    SeniorPrivilegeCheckIn,
+    SeniorPrivilegesBan,
 )
 
 
@@ -19,6 +21,6 @@ class StudentsAdmin(admin.ModelAdmin):
 # Register your models here.
 admin.site.register(Student, StudentsAdmin)
 admin.site.register(FreeBlockToday)
-admin.site.register(PersistentState)
 admin.site.register(FreePeriodCheckIn)
+admin.site.register(SeniorPrivilegesBan)
 admin.site.register(SeniorPrivilegeCheckIn)

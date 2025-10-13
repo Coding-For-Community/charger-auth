@@ -7,6 +7,6 @@ def get_now():
     This is used to "shim" different dates/times when the server is in debug mode.
     """
     if settings.DEBUG:
-        return datetime(2025, 9, 10, 9)
+        return datetime(2025, 9, 10, 10, 5)
     else:
         return datetime.now()

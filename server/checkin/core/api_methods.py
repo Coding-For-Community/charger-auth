@@ -1,18 +1,25 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from django.http import HttpRequest
 from future.backports.datetime import timezone
 
 from checkin.core.errors import DeviceIdConflict, InvalidStudent, ModeRequiredForSenior, NoFreeBlock, UseEmailInstead, \
-    InvalidAdminPerms, HasNotCheckedOut
+    HasNotCheckedOut, NoSeniorPrivileges, Http400
 from checkin.core.get_now import get_now
-from checkin.core.consts import FreeBlock, CheckInOption, US_EASTERN
-from checkin.models import FreeBlockToday, Student, FreePeriodCheckIn, SeniorPrivilegeCheckIn
+from checkin.core.consts import FreeBlock, CheckInOption, US_EASTERN, SP_ADDENDUM
+from checkin.models import FreeBlockToday, Student, FreePeriodCheckIn, SeniorPrivilegeCheckIn, SeniorPrivilegesBan
 from oauth.api import oauth_client
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CheckInRecord:
+    model: FreePeriodCheckIn | SeniorPrivilegeCheckIn
+    msg: str
 
 
 async def get_curr_free_block() -> FreeBlock | None:
@@ -55,41 +62,52 @@ async def parse_email(email_or_id: str):
         raise InvalidStudent
 
 
-async def get_checkin_record(email: str, mode: CheckInOption, device_id: str) -> tuple[
-    FreePeriodCheckIn | SeniorPrivilegeCheckIn, Student
-]:
+async def get_check_in_record(email: str, mode: CheckInOption, device_id: str) -> CheckInRecord | Http400:
     email = email.lower()
     free_block, student = await asyncio.gather(
         get_curr_free_block(),
         Student.objects.filter(email=email).afirst()
     )
-    is_sp_mode = mode in ["sp_check_in", "sp_check_out"]
+    if student is None:
+        return InvalidStudent()
 
-    if student is None or (not student.has_sp and is_sp_mode):
-        raise InvalidStudent
-    if student.has_sp and mode is None:
-        raise ModeRequiredForSenior
+    is_sp_mode = mode in ["sp_check_in", "sp_check_out"]
+    banned_from_sp = await SeniorPrivilegesBan.applies_to(email)
+    has_sp = student.is_senior and not banned_from_sp
+    if has_sp and mode is None:
+        return ModeRequiredForSenior()
+    elif not has_sp and is_sp_mode:
+        return NoSeniorPrivileges()
+
     if mode == "free_period" or mode is None:
         if free_block is None or free_block not in student.free_blocks:
-            raise NoFreeBlock
+            return NoFreeBlock(banned_from_sp)
         record = FreePeriodCheckIn(student=student, device_id=device_id)
         record.set_block(free_block)
-        return record, student
+        msg = f"Thanks for checking in for {free_block} block, {student.name}! "
+        if banned_from_sp:
+            msg += SP_ADDENDUM
+        return CheckInRecord(record, msg)
     elif is_sp_mode:
-        record = await SeniorPrivilegeCheckIn.objects.filter(student__email=email).afirst()
+        record = await SeniorPrivilegeCheckIn.objects.filter(
+            student__email=email,
+            check_out_date__date=datetime.now().date(),
+        ).afirst()
         if record and not record.checked_out and mode == "sp_check_in":
-            raise HasNotCheckedOut
+            return HasNotCheckedOut()
         if not record:
             record = SeniorPrivilegeCheckIn(student=student)
         elif record.device_id != device_id:
-            raise DeviceIdConflict
+            return DeviceIdConflict()
         record.device_id = device_id
         if mode == "sp_check_in":
             record.checked_out = False
             record.check_in_date = datetime.now(timezone.utc)
+            msg = f"Thanks for the senior privileges check-in, {student.name}!"
         else:
             record.checked_out = True
-        return record, student
+            msg = f"Thanks for the senior privileges check-out, {student.name}!"
+        return CheckInRecord(record, msg)
     else:
         raise Exception("Invalid mode: schema err")
 
@@ -112,11 +130,6 @@ async def get_perms(request: HttpRequest):
         "isAdmin": True,
         "teacherMonitored": user.username == "TeacherMonitoredKiosk",
     }
-
-
-async def throw_if_not_admin(request: HttpRequest):
-    if not (await get_perms(request)).get("teacherMonitored"):
-        raise InvalidAdminPerms
 
 
 def fmt_eastern_date(text: str | None):

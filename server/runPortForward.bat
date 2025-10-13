@@ -1,1 +1,1 @@
-ngrok http 8001 --domain=crack-monkfish-monthly.ngrok-free.app
+ngrok http --region us 8001 --domain=crack-monkfish-monthly.ngrok-free.app

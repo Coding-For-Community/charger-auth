@@ -1,12 +1,12 @@
 from asgiref.sync import sync_to_async
 from bitfield import BitField
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, EmailValidator
 from django.db import models
 from solo.models import SingletonModel
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 import os
-from checkin.core.consts import FreeBlock, ALL_FREE_BLOCKS, US_EASTERN
+from checkin.core.consts import FreeBlock, ALL_FREE_BLOCKS, US_EASTERN, EVERYONE_KW
 
 
 class Student(models.Model):
@@ -14,12 +14,14 @@ class Student(models.Model):
     A cary academy student.
     """
 
-    email = models.EmailField(max_length=200, primary_key=True)
+    email = models.EmailField(max_length=45, primary_key=True)
     free_blocks = BitField(flags=ALL_FREE_BLOCKS, default=0)
-    name = models.CharField(max_length=100, default="[Unknown]")
-    has_sp = models.BooleanField(default=False)
-    # is_senior = models.BooleanField(default=False)
-    # sp_revoked = models.BooleanField(default=True)
+    name = models.CharField(max_length=30, default="[Unknown]")
+    is_senior = models.BooleanField(default=False)
+
+    @classmethod
+    def as_bit_str(cls, free_block: FreeBlock) -> int:
+        return getattr(cls.free_blocks, free_block)
 
 
 class FreePeriodCheckIn(models.Model):
@@ -67,14 +69,10 @@ class SeniorPrivilegeCheckIn(models.Model):
     A senior privileges check-in and check-out attempt.
     """
 
-    student = models.OneToOneField(
-        Student,
-        on_delete=models.CASCADE,
-        related_name="sp_record"
-    )
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
     device_id = models.CharField(max_length=32)
     checked_out = models.BooleanField()
-    check_out_date = models.DateTimeField(auto_now_add=True)
+    check_out_date = models.DateTimeField()
     check_in_date = models.DateTimeField(null=True)
     video = models.FileField(upload_to="checkin_vids/", blank=True)
 
@@ -98,13 +96,6 @@ class SeniorPrivilegeCheckIn(models.Model):
         }
 
 
-@receiver(post_delete, sender=SeniorPrivilegeCheckIn)
-@receiver(post_delete, sender=FreePeriodCheckIn)
-def auto_delete_videos(sender, instance, **kwargs):
-    if instance.video and os.path.isfile(instance.video.path):
-        os.remove(instance.video.path)
-
-
 class FreeBlockToday(models.Model):
     """
     Represents the time of a free block today.
@@ -116,9 +107,28 @@ class FreeBlockToday(models.Model):
     time = models.TimeField()
 
 
-class PersistentState(SingletonModel):
-    desire_manual_reset = models.BooleanField(default=False)
+def email_or_everyone(value):
+    if value != EVERYONE_KW:
+        EmailValidator()(value)
+
+
+class SeniorPrivilegesBan(models.Model):
+    # No foreign key relationship here
+    # since we are periodically deleting & resetting Student(s).
+    is_for = models.CharField(
+        max_length=45,
+        validators=[email_or_everyone],
+        primary_key=True
+    )
 
     @classmethod
-    async def aget(cls):
-        return await sync_to_async(cls.get_solo)()
+    async def applies_to(cls, is_for: str):
+        return await cls.objects.filter(is_for=is_for).aexists()
+
+
+@receiver(post_delete, sender=SeniorPrivilegeCheckIn)
+@receiver(post_delete, sender=FreePeriodCheckIn)
+def auto_delete_videos(sender, instance, **kwargs):
+    if instance.video and os.path.isfile(instance.video.path):
+        os.remove(instance.video.path)
+
