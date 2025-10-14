@@ -232,6 +232,7 @@ function Admin() {
             variant="outline"
             color="blue"
             radius="lg"
+            onClick={() => studentsQ.refetch()}
             loading={studentsQ.isFetching}
           >
             <IconReload size="20" />
@@ -321,8 +322,6 @@ function Admin() {
       <ManageSeniorPrivileges
         opened={spManagerOpened}
         onClose={() => setSpManagerOpened(false)}
-        seniors={studentsQ.data?.filter((s) => s.is_senior).map((s) => s.name) ?? []}
-        initiallyEnabled={studentsQ.data?.filter((s) => s.has_sp).map((s) => s.name) ?? []}
       />
     </AppShell>
   );
@@ -373,9 +372,9 @@ function ColumnPanel(props: {
             No students
           </Text>
         ) : (
-          props.students.map((student: any) => (
+          props.students.map((student: any, idx: number) => (
             <StudentListing
-              key={student.name}
+              key={student + idx}
               name={student.name}
               hasCheckbox={props.hasCheckbox}
               checked={props.checked(student.name)}

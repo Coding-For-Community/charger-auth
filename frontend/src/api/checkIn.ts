@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 export interface CheckInResult {
   status: "ok" | "err" | "loading" | "modeNeeded";
   msg?: string;
-  studentName?: string;
 }
 
 export type ModeOption = "sp_check_out" | "sp_check_in" | "free_period";
@@ -68,7 +67,7 @@ export async function checkIn(
 export async function parseCheckInRes(res: Response): Promise<CheckInResult> {
   switch (res.status) {
     case 200:
-      return { status: "ok", studentName: (await res.json())["studentName"] };
+      return { status: "ok", msg: (await res.json())["successMsg"] };
     case 400:
       try {
         const data = await res.json()

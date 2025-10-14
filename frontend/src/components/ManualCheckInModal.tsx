@@ -38,7 +38,7 @@ export default function ManualCheckInModal(props: ManualCheckInProps) {
         }),
       );
       if (res.status === "ok") {
-        return res.studentName;
+        return res.msg;
       } else if (res.status === "err") {
         window.alert(res.msg);
         return null;
@@ -59,7 +59,7 @@ export default function ManualCheckInModal(props: ManualCheckInProps) {
         {checkinQ.data && !shouldReset ? (
           <Stack align="center" justify="center" gap={20}>
             <IconCheck color="green" size={100} style={indicatorStyle} />
-            <Title ta="center">{checkinQ.data} just signed in.</Title>
+            <Title ta="center">{checkinQ.data}</Title>
             <Button onClick={onClose} w="100%" radius={12}>
               Ok
             </Button>

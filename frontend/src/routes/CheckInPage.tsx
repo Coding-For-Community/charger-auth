@@ -80,8 +80,7 @@ function CheckInPage() {
             Check-in Successful!
           </Title>
           <Text ta="center" c="dimmed" mb="md">
-            Thanks for checking in
-            {status.studentName ? `, ${status.studentName}` : ""}! <br />
+            {status.msg} <br />
             {new Date().toLocaleString()} <br />
           </Text>
           <Link to="/" search={{ cooldownStartMs: new Date().getTime() }}>
