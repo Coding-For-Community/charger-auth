@@ -5,13 +5,13 @@ import schedule
 from asgiref.sync import sync_to_async
 
 from django.core.management import BaseCommand
+from django.db import transaction
 from pywebpush import webpush, WebPushException
 from checkin.core.get_now import get_now
 from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock
 from checkin.models import (
     Student,
     FreeBlockToday,
-    PersistentState,
     FreePeriodCheckIn,
     SeniorPrivilegeCheckIn,
 )
@@ -29,7 +29,6 @@ class Command(BaseCommand):
         super().__init__()
         load_dotenv()
         self.free_blocks_today: dict[FreeBlock, time] = {}
-        self.reset_count = 0
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -39,72 +38,64 @@ class Command(BaseCommand):
             default="07:00",
             nargs="?",
         )
+        parser.add_argument(
+            "-resetInitial",
+            action="store_true",
+            help="Whether to initially reset state.",
+        )
 
     def handle(self, *args, **options):
         try:
-            asyncio.run(self.main(options["time"]))
+            asyncio.run(self.main(options["time"], options["resetInitial"]))
         except KeyboardInterrupt:
             return
 
-    async def main(self, scheduled_time: str):
+    async def main(self, scheduled_time: str, reset_initial: bool):
         logger.info("Daily reset task started.")
-        await self.daily_reset(False)
+        await self.daily_reset(reset_initial)
         schedule.every().day.at(scheduled_time).do(
             lambda: asyncio.create_task(self.daily_reset(True))
         )
         while True:
             schedule.run_pending()
-            _, bg_reqs = await asyncio.gather(asyncio.sleep(1), PersistentState.aget())
-            if bg_reqs and bg_reqs.desire_manual_reset and self.reset_count < 3:
-                logger.info("Manual reset requested.")
-                await Student.objects.all().adelete()
-                await self.daily_reset(False)
-                bg_reqs.desire_manual_reset = False
-                await bg_reqs.asave()
-                self.reset_count += 1
+            await asyncio.sleep(300)
 
     async def daily_reset(self, reset_state: bool):
         """
         Common initialization that should be scheduled to run every day.
         """
-        from oauth.api import oauth_client
+        now = get_now()
+        if now.month in [6, 7]:
+            return
 
-        client = await oauth_client()
-        today_as_str = get_now().strftime("%m-%d-%Y")
-
-        # Fetch data and reset Students objects
+        await FreeBlockToday.objects.all().adelete()
         if reset_state:
-            rosters_res, calendar_res, _, _, _ = await asyncio.gather(
-                client.get("/academics/rosters"),
-                client.get(
-                    f"/academics/schedules/master?"
-                    f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
-                ),
-                Student.objects.all().aupdate(free_blocks=0),
-                FreePeriodCheckIn.objects.all().adelete(),
-                _save_sp_data_to_lts(),
-            )
-        else:
-            rosters_res, calendar_res = await asyncio.gather(
-                client.get("/academics/rosters"),
-                client.get(
-                    f"/academics/schedules/master?"
-                    f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
-                )
-            )
+            await FreePeriodCheckIn.objects.all().adelete()
+            if now.month == 8 and now.day == 1:
+                await Student.objects.all().adelete()
+            else:
+                await Student.objects.all().aupdate(free_blocks=0)
 
-        if rosters_res.status_code != 200:
-            raise Exception(
-                "Roster data did not initialize. Err: \n" + rosters_res.text
-            )
-        elif calendar_res.status_code != 200:
-            raise Exception(
-                "Calendar data did not initialize. Err: \n" + calendar_res.text
-            )
+        from oauth.api import oauth_client
+        client = await oauth_client()
+        today_as_str = now.strftime("%m-%d-%Y")
+        senior_year = now.year if now.month < 7 else now.year + 1
+
+        # Fetches blackbaud data
+        results = await asyncio.gather(
+            client.get("/academics/rosters"),
+            client.get(
+                f"/academics/schedules/master?"
+                f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
+            ),
+            client.get(f"/users?roles=4180&grad_year={senior_year}")
+        )
+        for result in results:
+            result.raise_for_status()
+        rosters_res, calendar_res, seniors_res = results
 
         # Resets the cached schedule for today
         calendar_data = calendar_res.json()
-        await FreeBlockToday.objects.all().adelete()
         for schedule_set in calendar_data["value"][0]["schedule_sets"]:
             if schedule_set["schedule_set_id"] != 3051:
                 continue
@@ -121,37 +112,52 @@ class Command(BaseCommand):
 
         # Then, initialize the students and the free blocks they have
         courses = rosters_res.json()
+        seniors = seniors_res.json()["value"]
+        senior_emails = [
+            data.get("email").lower() for data in seniors if data.get("email")
+        ]
         num_free_block_courses = 0
-        tasks = []
         for course in courses:
             maybe_free_block = self._free_block_of(course)
             if maybe_free_block:
                 num_free_block_courses += 1
-            tasks.extend(
-                self._save_student(user, maybe_free_block) for user in course["roster"]
-            )
-        await asyncio.gather(*tasks)
-        logger.info(f"Num free block courses: {num_free_block_courses}")
+            students = await asyncio.gather(*[
+                self._get_student(user, maybe_free_block, senior_emails)
+                for user in course["roster"]
+            ])
+            students = set(filter(None, students))
+            await asyncio.gather(*[s.asave() for s in students])
 
-    async def _save_student(
-        self, user: dict, maybe_free_block: FreeBlock | None = None
-    ):
+        logger.info(f"Num free blocks: {num_free_block_courses}")
+
+    async def _get_student(
+        self, user: dict, maybe_free_block: FreeBlock | None, senior_emails: list[str]
+    ) -> Student | None:
+        # Get basic data from dict
         if user["leader"].get("type") == "Teacher":
-            return
+            return None
         data = user["user"]
         email = data["email"].lower().strip()
         if not email:
-            return
-        student, _ = await Student.objects.aget_or_create(email=email)
-        student.name = f"{data['first_name']} {data['last_name']}"
-        if "middle_name" in data:
-            student.name = student.name.replace(" ", f" {data['middle_name']} ")
+            return None
+
+        # Create student and set basic properties
+        student = await Student.objects.filter(email=email).afirst()
+        if not student:
+            student = Student(email=email)
+            student.is_senior = email in senior_emails
+            if "middle_name" in data:
+                student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
+            else:
+                student.name = f"{data['first_name']} {data['last_name']}"
+
+        # Add free periods and register reminders
         if maybe_free_block:
             if maybe_free_block not in self.free_blocks_today.keys():
                 raise Exception(
                     f"Free block {maybe_free_block} not found in today's calendar"
                 )
-            student.free_blocks += maybe_free_block
+            student.free_blocks |= Student.as_bit_str(maybe_free_block)
             block_time = self.free_blocks_today[maybe_free_block]
             reminder_time = time(block_time.hour, block_time.minute + 5).strftime(
                 "%H:%M"
@@ -159,7 +165,8 @@ class Command(BaseCommand):
             schedule.every().day.at(reminder_time).do(
                 lambda: asyncio.create_task(_remind_student(student))
             )
-        await student.asave()
+
+        return student
 
     def _free_block_of(self, course: dict) -> FreeBlock | None:
         now = get_now()
@@ -174,20 +181,6 @@ class Command(BaseCommand):
             if block == free_block["name"]:
                 return block
         return None
-
-
-async def _save_sp_data_to_lts():
-    items = SeniorPrivilegeCheckIn.objects.all()
-    item_list = []
-    async for item in items:
-        item_list.append(item)
-        item.video = ''
-    await items.adelete()
-    asyncio.create_task(
-        SeniorPrivilegeCheckIn.objects.using("lts").abulk_create(
-            item_list, ignore_conflicts=True
-        )
-    )
 
 
 async def _remind_student(student: Student):

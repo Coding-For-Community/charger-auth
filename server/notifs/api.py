@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from ninja.errors import HttpError
 from pywebpush import webpush, WebPushException
 
+from checkin.core.errors import InvalidStudent
 from checkin.models import Student
 from config import settings
 from notifs.models import SubscriptionData
@@ -50,7 +51,7 @@ async def unregister_webpush(request, data: UnregisterSchema):
 async def get_student(email: str):
     student = await Student.objects.filter(email=email.lower()).afirst()
     if not student:
-        raise HttpError(400, "Student does not exist")
+        raise InvalidStudent
     return student
 
 

@@ -6,6 +6,8 @@ from ninja.errors import ValidationError
 import oauth.api
 from ninja import NinjaAPI
 
+from checkin.core.errors import Http400
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -22,6 +24,10 @@ try:
     @api.get("/")
     def home(request):
         return "Whassup"
+
+    @api.exception_handler(Http400)
+    def handle_user_error(request, exc: Http400):
+        return exc
 
     @api.exception_handler(ValidationError)
     def handle_validation_error(request, exc):
