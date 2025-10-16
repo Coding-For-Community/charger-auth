@@ -26,7 +26,7 @@ from checkin.core.api_methods import (
     fmt_eastern_date,
 )
 from checkin.core.compress_video import compress_video
-from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock, EVERYONE_KW
+from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock, EVERYONE_KW, US_EASTERN
 from checkin.core.errors import InvalidFreeBlock, DeviceIdConflict, NoVideoFound, Http400
 from checkin.core.get_now import get_now
 from checkin.core.random_token_manager import RandomTokenManager
@@ -53,7 +53,7 @@ async def token_for_kiosk(request: HttpRequest):
         get_perms(request), get_curr_free_block()
     )
     if not perms.get("isAdmin"):
-        return HttpResponse(status_code=403)
+        return HttpResponse(status=403)
     token = kiosk_token_manager.get()
     token["curr_free_block"] = curr_free_block
     if curr_free_block is None:
@@ -67,7 +67,7 @@ async def token_for_kiosk(request: HttpRequest):
 @router.get("/userToken/")
 async def token_for_student(request, kiosk_token: str):
     if not kiosk_token_manager.validate(kiosk_token):
-        return HttpResponse("Invalid token", status_code=403)
+        return HttpResponse("Invalid token", status=403)
     token = str(uuid.uuid4())
     async with user_tokens_lock:
         user_tokens.append(token)
@@ -123,9 +123,9 @@ async def fetch_sp_students(request, from_date=None, to_date=None):
     if from_date:
         records = records.filter(check_out_date__gte=from_date)
     if to_date:
-        records = records.filter(check_in_date__lte=to_date)
+        records = records.filter(check_out_date__lte=to_date)
     if not from_date and not to_date:
-        records = records.filter(check_out_date__date=datetime.now(timezone.utc).date())
+        records = records.filter(check_out_date__date=datetime.now(US_EASTERN).date())
 
     async for r in records.all():
         output.append(r.dict())
@@ -170,7 +170,7 @@ async def perms_endpoint(request):
 async def check_in_student(request, data: CheckInSchema):
     if data.user_token not in user_tokens:
         logger.info(f"USER TOKEN: {data.user_token}")
-        return HttpResponse("Invalid token", status_code=403)
+        return HttpResponse("Invalid token", status=403)
     record = await get_check_in_record(data.email, data.mode, data.device_id)
     if isinstance(record, Http400):
         return record
@@ -208,7 +208,7 @@ async def check_in_student_tentative(
 @router.post("/runManual/")
 async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchema):
     if not (await get_perms(request)).get("teacherMonitored"):
-        return HttpResponse(status_code=403)
+        return HttpResponse(status=403)
     email = await parse_email(data.email_or_id)
     record = await get_check_in_record(email, data.mode, uuid.uuid4().hex)
     if isinstance(record, Http400):
@@ -254,7 +254,7 @@ async def fetch_all_seniors(request):
 @router.post("/enableSp/")
 async def enable_senior_privileges(request, is_for: str = EVERYONE_KW):
     if not (await get_perms(request)).get("isAdmin"):
-        return HttpResponse(status_code=403)
+        return HttpResponse(status=403)
     if is_for == EVERYONE_KW:
         await SeniorPrivilegesBan.objects.all().adelete()
         return {"success": True}
@@ -270,7 +270,7 @@ async def enable_senior_privileges(request, is_for: str = EVERYONE_KW):
 @router.post("/disableSp/")
 async def disable_senior_privileges(request, is_for: str = EVERYONE_KW):
     if not (await get_perms(request)).get("isAdmin"):
-        return HttpResponse(status_code=403)
+        return HttpResponse(status=403)
     if is_for == EVERYONE_KW:
         await SeniorPrivilegesBan.objects.all().adelete()
     await SeniorPrivilegesBan.objects.acreate(is_for=is_for)

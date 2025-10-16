@@ -104,7 +104,8 @@ class FreeBlockToday(models.Model):
     block: FreeBlock = models.CharField(
         max_length=1, validators=[RegexValidator("[A-G]")], primary_key=True
     )
-    time = models.TimeField()
+    start = models.DateTimeField()
+    end = models.DateTimeField()
 
 
 def email_or_everyone(value):

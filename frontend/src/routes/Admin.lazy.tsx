@@ -143,7 +143,7 @@ function Admin() {
       >
         <Group gap={rem(10)}>
           <img
-            src="icon.svg"
+            src="ca-icon.png"
             width={32}
             height={32}
             style={{ borderRadius: 8 }}
@@ -261,7 +261,8 @@ function Admin() {
 
       <AppShell.Main mih="calc(100vh - 20px)">
         <Title order={4} c="gray.7" mb={rem(8)}>
-          Students with {mode} block free
+          Students with
+          {mode == SP_MODE ? " Senior Privileges" : ` ${mode} Block Free`}
         </Title>
         <Divider mb={rem(16)} />
         <Group
