@@ -7,6 +7,11 @@ our_apps = ["checkin", "oauth", "notifs", "config"]
 curr_log_ctx = ContextVar("curr_log_ctx", default={})
 
 
+class _FileFormatter(logging.Formatter):
+    def __init__(self):
+        super().__init__("%(asctime)s - %(name)s:%(levelname)s: %(message)s")
+
+
 class _StdoutFormatter(logging.Formatter):
     def __init__(self):
         super().__init__()

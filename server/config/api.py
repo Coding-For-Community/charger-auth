@@ -23,6 +23,7 @@ try:
 
     @api.get("/")
     def home(request):
+        logger.info("Home Visit")
         return "Whassup"
 
     @api.exception_handler(Http400)

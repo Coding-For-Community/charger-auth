@@ -7,4 +7,4 @@ prod.sqlite3*
 lts.prod.sqlite3*
 .env
 media/
-logutil/main.log.1
+logs/

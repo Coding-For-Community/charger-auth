@@ -4,6 +4,9 @@
   "formatters": {
     "colored": {
       "()": "config.logging_util._StdoutFormatter"
+    },
+    "noncolored": {
+      "()": "config.logging_util._FileFormatter"
     }
   },
   "handlers": {
@@ -11,20 +14,42 @@
       "level": "INFO",
       "class": "logging.StreamHandler",
       "formatter": "colored"
+    },
+    "everything_file": {
+	"level": "DEBUG",
+	"class": "logging.FileHandler",
+	"filename": "logs/everything.log",
+	"formatter": "noncolored"
+    },
+    "warnings_only_file": {
+	"level": "WARNING",
+	"class": "logging.FileHandler",
+	"filename": "logs/warningsOnly.log",
+	"formatter": "noncolored"
     }
   },
   "loggers": {
     "": {
       "handlers": [
-        "console"
+        "console",
+	"everything_file",
+	"warnings_only_file"
       ],
       "level": "DEBUG",
-      "propagate": true
+      "propagate": false
     },
     "uvicorn.error": {
+      "handlers": [
+	"everything_file",
+	"warnings_only_file"
+      ],
       "aliases": ["uvicorn"]
     },
     "django": {
+      "handlers": [
+	"everything_file",
+	"warnings_only_file"
+      ],
       "level": "INFO"
     }
   }
