@@ -2,33 +2,25 @@ import asyncio
 import logging
 import os
 import schedule
-from asgiref.sync import sync_to_async
 
 from django.core.management import BaseCommand
-from django.db import transaction
 from pywebpush import webpush, WebPushException
 from checkin.core.get_now import get_now
 from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock
-from checkin.models import (
-    Student,
-    FreeBlockToday,
-    FreePeriodCheckIn,
-    SeniorPrivilegeCheckIn,
-)
-from datetime import datetime, time
+from checkin.models import Student, FreeBlockToday, FreePeriodCheckIn
+from datetime import datetime, time, timedelta, timezone
 from dotenv import load_dotenv
 from notifs.models import SubscriptionData
 
 logger = logging.getLogger(__name__)
-
+load_dotenv()
 
 class Command(BaseCommand):
     help = "When run, periodically resets the database data at a certain time(7:00 by default) every day"
 
     def __init__(self):
         super().__init__()
-        load_dotenv()
-        self.free_blocks_today: dict[FreeBlock, time] = {}
+        self.free_blocks_today: dict[FreeBlock, FreeBlockToday] = {}
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -102,11 +94,23 @@ class Command(BaseCommand):
             for block in schedule_set["blocks"]:
                 if block["block"] not in ALL_FREE_BLOCKS:
                     continue
+                fp_time = datetime.combine(
+                    now.date(),
+                    datetime.fromisoformat(block["start_time"]).time()
+                ).astimezone(timezone.utc)
+                # The first free period of the day and the first free period after lunch
+                # Should start 30 minutes early instead of 10 minutes
+                if (time(8, 30) < fp_time.time() < time(9, 20) or
+                    time(12, 30) < fp_time.time() < time(13, 15)):
+                    minutes_ahead = 30
+                else:
+                    minutes_ahead = 10
                 data = FreeBlockToday(
                     block=block["block"],
-                    time=datetime.fromisoformat(block["start_time"]).time(),
+                    start=fp_time - timedelta(minutes=minutes_ahead),
+                    end=fp_time + timedelta(minutes=10)
                 )
-                self.free_blocks_today[data.block] = data.time
+                self.free_blocks_today[block["block"]] = data
                 await data.asave()
             break
 
@@ -145,11 +149,11 @@ class Command(BaseCommand):
         student = await Student.objects.filter(email=email).afirst()
         if not student:
             student = Student(email=email)
-            student.is_senior = email in senior_emails
-            if "middle_name" in data:
-                student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
-            else:
-                student.name = f"{data['first_name']} {data['last_name']}"
+        student.is_senior = email in senior_emails
+        if data.get('middle_name'):
+            student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
+        else:
+            student.name = f"{data['first_name']} {data['last_name']}"
 
         # Add free periods and register reminders
         if maybe_free_block:
@@ -158,10 +162,8 @@ class Command(BaseCommand):
                     f"Free block {maybe_free_block} not found in today's calendar"
                 )
             student.free_blocks |= Student.as_bit_str(maybe_free_block)
-            block_time = self.free_blocks_today[maybe_free_block]
-            reminder_time = time(block_time.hour, block_time.minute + 5).strftime(
-                "%H:%M"
-            )
+            end_time = self.free_blocks_today[maybe_free_block].end
+            reminder_time = (end_time - timedelta(minutes=7)).strftime("%H:%M")
             schedule.every().day.at(reminder_time).do(
                 lambda: asyncio.create_task(_remind_student(student))
             )

@@ -25,8 +25,9 @@ class CheckInRecord:
 async def get_curr_free_block() -> FreeBlock | None:
     now = get_now()
     async for item in FreeBlockToday.objects.all():
-        delta_secs = (datetime.combine(now.date(), item.time) - now).total_seconds()
-        if -600 <= delta_secs <= 600:
+        time_from_start = (now - item.start).total_seconds()
+        time_from_end = (item.end - now).total_seconds()
+        if time_from_start > 0 and time_from_end > 0:
             return item.block
     return None
 
@@ -34,8 +35,8 @@ async def get_curr_free_block() -> FreeBlock | None:
 async def get_next_free_block() -> (FreeBlock | None, float):
     now = get_now()
     async for item in FreeBlockToday.objects.all():
-        delta_secs = (datetime.combine(now.date(), item.time) - now).total_seconds()
-        if delta_secs < -600:
+        delta_secs = (item.start - now).total_seconds()
+        if delta_secs < 0:
             return item.block, abs(delta_secs)
     # If we're done for free blocks for today, re-send a request at tomorrow 8:30
     tomorrow_830 = now.replace(hour=8, minute=30, second=0)
@@ -102,7 +103,7 @@ async def get_check_in_record(email: str, mode: CheckInOption, device_id: str) -
         record.device_id = device_id
         if mode == "sp_check_in":
             record.checked_out = False
-            record.check_in_date = datetime.now(timezone.utc)
+            record.check_in_date = datetime.now(US_EASTERN)
             msg = f"Thanks for the senior privileges check-in, {student.name}!"
         else:
             record.checked_out = True

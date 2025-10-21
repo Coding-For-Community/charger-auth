@@ -72,7 +72,7 @@ export function ManageSeniorPrivileges({
   } else {
     content = (
       <Stack gap="sm">
-        <Group justify="space-between">
+        <Group justify="space-between" px="md">
           <Text fw={600}>Enable for all seniors</Text>
           <Group>
             <Button
@@ -93,8 +93,8 @@ export function ManageSeniorPrivileges({
             </Button>
           </Group>
         </Group>
-        <Divider label="Or manage individually" labelPosition="center" />
-        <ScrollArea h={300}>
+        <Divider label="Or manage individually" labelPosition="center" px="md" />
+        <ScrollArea h={300} px="md">
           <Stack gap={0}>
             {searchedSeniors.map(senior => (
               <Group key={senior.name} justify="space-between">
@@ -112,7 +112,7 @@ export function ManageSeniorPrivileges({
             )}
           </Stack>
         </ScrollArea>
-        <Group justify="space-between" mt="md">
+        <Group justify="space-between" mt="md" px="md">
           <TextInput
             placeholder="Search students by name"
             value={searchQ}
@@ -128,8 +128,24 @@ export function ManageSeniorPrivileges({
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title={<Title order={3}>Manage Senior Privileges</Title>} size="lg" centered>
-      {content}
-    </Modal>
+    <Modal.Root 
+      opened={opened} 
+      onClose={onClose} 
+      size="lg" 
+      centered
+      padding={0}
+    >
+      <Modal.Overlay />
+      <Modal.Content>
+        <Modal.Header p="md">
+          <Title order={3}>Manage Senior Privileges</Title>
+          <Modal.CloseButton />
+        </Modal.Header>
+
+        <Modal.Body h={480} style={{ overflow: "hidden" }}>
+          {content}
+        </Modal.Body>
+      </Modal.Content>
+    </Modal.Root>
   );
 }
