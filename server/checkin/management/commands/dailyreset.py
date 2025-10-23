@@ -32,20 +32,21 @@ class Command(BaseCommand):
             nargs="?",
         )
         parser.add_argument(
-            "-resetInitial",
+            "-dontRunInitial",
             action="store_true",
-            help="Whether to initially reset state.",
+            help="If true, does not run the reset task immediately.",
         )
 
     def handle(self, *args, **options):
         try:
-            asyncio.run(self.main(options["time"], options["resetInitial"]))
+            asyncio.run(self.main(options["time"], options["dontRunInitial"]))
         except KeyboardInterrupt:
             return
 
-    async def main(self, scheduled_time: str, reset_initial: bool):
+    async def main(self, scheduled_time: str, dont_run_initial: bool):
         logger.info("Daily reset task started.")
-        await self.daily_reset(reset_initial)
+        if not dont_run_initial:
+            await self.daily_reset(False)
         schedule.every().day.at(scheduled_time).do(
             lambda: asyncio.create_task(self.daily_reset(True))
         )
