@@ -55,7 +55,7 @@ async def get_next_free_block() -> (FreeBlock | None, float):
     tomorrow_830 = now.replace(hour=8, minute=30, second=0)
     delta_secs = (tomorrow_830 - now).total_seconds()
     while delta_secs < 0:
-        now += timedelta(days=1)
+        tomorrow_830 += timedelta(days=1)
         delta_secs = (tomorrow_830 - now).total_seconds()
     return None, delta_secs
 
