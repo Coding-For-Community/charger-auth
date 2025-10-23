@@ -6,25 +6,34 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0003_seniorprivilegecheckin_device_id_and_more'),
+        ("checkin", "0003_seniorprivilegecheckin_device_id_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='freeperiodcheckin',
-            name='student',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='fp_records', to='checkin.student'),
+            model_name="freeperiodcheckin",
+            name="student",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="fp_records",
+                to="checkin.student",
+            ),
         ),
         migrations.AlterField(
-            model_name='seniorprivilegecheckin',
-            name='student',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='sp_record', to='checkin.student'),
+            model_name="seniorprivilegecheckin",
+            name="student",
+            field=models.OneToOneField(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="sp_record",
+                to="checkin.student",
+            ),
         ),
         migrations.AlterField(
-            model_name='student',
-            name='free_blocks',
-            field=bitfield.models.BitField(['A', 'B', 'C', 'D', 'E', 'F', 'G'], default=0),
+            model_name="student",
+            name="free_blocks",
+            field=bitfield.models.BitField(
+                ["A", "B", "C", "D", "E", "F", "G"], default=0
+            ),
         ),
     ]

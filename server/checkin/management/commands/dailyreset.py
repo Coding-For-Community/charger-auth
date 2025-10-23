@@ -15,6 +15,7 @@ from notifs.models import SubscriptionData
 logger = logging.getLogger(__name__)
 load_dotenv()
 
+
 class Command(BaseCommand):
     help = "When run, periodically resets the database data at a certain time(7:00 by default) every day"
 
@@ -69,6 +70,7 @@ class Command(BaseCommand):
                 await Student.objects.all().aupdate(free_blocks=0)
 
         from oauth.api import oauth_client
+
         client = await oauth_client()
         today_as_str = now.strftime("%m-%d-%Y")
         senior_year = now.year if now.month < 7 else now.year + 1
@@ -80,7 +82,7 @@ class Command(BaseCommand):
                 f"/academics/schedules/master?"
                 f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
             ),
-            client.get(f"/users?roles=4180&grad_year={senior_year}")
+            client.get(f"/users?roles=4180&grad_year={senior_year}"),
         )
         for result in results:
             result.raise_for_status()
@@ -95,20 +97,20 @@ class Command(BaseCommand):
                 if block["block"] not in ALL_FREE_BLOCKS:
                     continue
                 fp_time = datetime.combine(
-                    now.date(),
-                    datetime.fromisoformat(block["start_time"]).time()
+                    now.date(), datetime.fromisoformat(block["start_time"]).time()
                 ).astimezone(timezone.utc)
                 # The first free period of the day and the first free period after lunch
                 # Should start 30 minutes early instead of 10 minutes
-                if (time(8, 30) < fp_time.time() < time(9, 20) or
-                    time(12, 30) < fp_time.time() < time(13, 15)):
+                if time(8, 30) < fp_time.time() < time(9, 20) or time(
+                    12, 30
+                ) < fp_time.time() < time(13, 15):
                     minutes_ahead = 30
                 else:
                     minutes_ahead = 10
                 data = FreeBlockToday(
                     block=block["block"],
                     start=fp_time - timedelta(minutes=minutes_ahead),
-                    end=fp_time + timedelta(minutes=10)
+                    end=fp_time + timedelta(minutes=10),
                 )
                 self.free_blocks_today[block["block"]] = data
                 await data.asave()
@@ -125,10 +127,12 @@ class Command(BaseCommand):
             maybe_free_block = self._free_block_of(course)
             if maybe_free_block:
                 num_free_block_courses += 1
-            students = await asyncio.gather(*[
-                self._get_student(user, maybe_free_block, senior_emails)
-                for user in course["roster"]
-            ])
+            students = await asyncio.gather(
+                *[
+                    self._get_student(user, maybe_free_block, senior_emails)
+                    for user in course["roster"]
+                ]
+            )
             students = set(filter(None, students))
             await asyncio.gather(*[s.asave() for s in students])
 
@@ -150,8 +154,10 @@ class Command(BaseCommand):
         if not student:
             student = Student(email=email)
         student.is_senior = email in senior_emails
-        if data.get('middle_name'):
-            student.name = f"{data['first_name']} {data['middle_name']} {data['last_name']}"
+        if data.get("middle_name"):
+            student.name = (
+                f"{data['first_name']} {data['middle_name']} {data['last_name']}"
+            )
         else:
             student.name = f"{data['first_name']} {data['last_name']}"
 

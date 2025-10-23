@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0001_initial'),
+        ("checkin", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='seniorprivilegecheckin',
-            name='video',
-            field=models.FileField(blank=True, upload_to='checkin_vids/'),
+            model_name="seniorprivilegecheckin",
+            name="video",
+            field=models.FileField(blank=True, upload_to="checkin_vids/"),
         ),
     ]

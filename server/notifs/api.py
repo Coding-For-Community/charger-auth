@@ -36,7 +36,7 @@ async def register_webpush(request, data: RegisterSchema):
     await SubscriptionData(
         device_id=data.device_id,
         student=await get_student(data.email),
-        subscription=data.subscription
+        subscription=data.subscription,
     ).asave()
     return {"success": True}
 

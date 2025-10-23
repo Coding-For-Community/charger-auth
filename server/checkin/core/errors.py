@@ -13,11 +13,7 @@ class Http400(JsonResponse, Exception):
 
     def __init__(self, error_code: int, msg: str):
         logging.info(f"User error: {msg}")
-        JsonResponse.__init__(
-            self,
-            {"msg": msg, "err_code": error_code},
-            status=400
-        )
+        JsonResponse.__init__(self, {"msg": msg, "err_code": error_code}, status=400)
         Exception.__init__(self, msg)
 
 
@@ -32,7 +28,9 @@ class NoFreeBlock(Http400):
 
 class ModeRequiredForSenior(Http400):
     def __init__(self):
-        super().__init__(2, "Since this student is a senior, the mode must be specified.")
+        super().__init__(
+            2, "Since this student is a senior, the mode must be specified."
+        )
 
 
 class DeviceIdConflict(Http400):
@@ -42,7 +40,9 @@ class DeviceIdConflict(Http400):
 
 class InvalidStudent(Http400):
     def __init__(self):
-        super().__init__(4, "Invalid Student ID/Email - are you sure you're entering it correctly?")
+        super().__init__(
+            4, "Invalid Student ID/Email - are you sure you're entering it correctly?"
+        )
 
 
 class UseEmailInstead(Http400):
@@ -65,7 +65,7 @@ class HasNotCheckedOut(Http400):
         super().__init__(
             8,
             "You're trying to check back in for senior privileges, "
-            "but you haven't checked out yet."
+            "but you haven't checked out yet.",
         )
 
 
@@ -79,5 +79,5 @@ class NoSeniorPrivileges(Http400):
         super().__init__(
             10,
             "You don't have senior privileges."
-            " If you're a senior, you probably forgot to do the form."
+            " If you're a senior, you probably forgot to do the form.",
         )

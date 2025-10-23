@@ -27,10 +27,20 @@ from checkin.core.api_methods import (
 )
 from checkin.core.compress_video import compress_video
 from checkin.core.consts import ALL_FREE_BLOCKS, FreeBlock, EVERYONE_KW, US_EASTERN
-from checkin.core.errors import InvalidFreeBlock, DeviceIdConflict, NoVideoFound, Http400
+from checkin.core.errors import (
+    InvalidFreeBlock,
+    DeviceIdConflict,
+    NoVideoFound,
+    Http400,
+)
 from checkin.core.get_now import get_now
 from checkin.core.random_token_manager import RandomTokenManager
-from checkin.models import Student, FreePeriodCheckIn, SeniorPrivilegeCheckIn, SeniorPrivilegesBan
+from checkin.models import (
+    Student,
+    FreePeriodCheckIn,
+    SeniorPrivilegeCheckIn,
+    SeniorPrivilegesBan,
+)
 from checkin.schema import (
     CheckInSchema,
     AdminLoginSchema,
@@ -93,7 +103,7 @@ async def fetch_students(request, free_block: FreeBlock):
         queryset=FreePeriodCheckIn.objects.filter(
             free_block_idx=ALL_FREE_BLOCKS.index(free_block)
         ),
-        to_attr="fp_records_filtered"
+        to_attr="fp_records_filtered",
     )
     students = Student.objects.filter(free_blocks=Student.as_bit_str(free_block))
     students = students.prefetch_related(records_prefetch)
@@ -105,11 +115,7 @@ async def fetch_students(request, free_block: FreeBlock):
             status = "tentative"
         else:
             status = "checked_in"
-        output.append({
-            "name": student.name,
-            "email": student.email,
-            "status": status
-        })
+        output.append({"name": student.name, "email": student.email, "status": status})
     return output
 
 
@@ -134,7 +140,9 @@ async def fetch_sp_students(request, from_date=None, to_date=None):
 
 @router.post("/clearSpCheckIns/")
 async def clear_sp_check_ins(request):
-    await SeniorPrivilegeCheckIn.objects.exclude(check_out_date__date=datetime.now().date()).adelete()
+    await SeniorPrivilegeCheckIn.objects.exclude(
+        check_out_date__date=datetime.now().date()
+    ).adelete()
     return {"success": True}
 
 
@@ -188,9 +196,7 @@ async def check_in_student_tentative(
     request, input_data: TentativeCheckInSchema, raw_video: File[UploadedFile]
 ):
     record = await get_check_in_record(
-        input_data.email,
-        input_data.mode,
-        input_data.device_id
+        input_data.email, input_data.mode, input_data.device_id
     )
     if isinstance(record, Http400):
         return record
@@ -278,6 +284,7 @@ async def disable_senior_privileges(request, is_for: str = EVERYONE_KW):
 
 
 if settings.DEBUG:
+
     @router.get("/test/addLotsOfStudents/")
     async def add_lots_of_students(request):
         for i in range(500):
@@ -299,21 +306,25 @@ if settings.DEBUG:
         students = Student.objects.order_by("?")
         async for s in students:
             for i in range(500):
-                objs.append(SeniorPrivilegeCheckIn(
-                    student=s,
-                    device_id=uuid.uuid4().hex,
-                    checked_out=random.random() > 0.5,
-                    check_out_date=datetime.now(timezone.utc) - timedelta(days=random.randint(2, 100))
-                ))
+                objs.append(
+                    SeniorPrivilegeCheckIn(
+                        student=s,
+                        device_id=uuid.uuid4().hex,
+                        checked_out=random.random() > 0.5,
+                        check_out_date=datetime.now(timezone.utc)
+                        - timedelta(days=random.randint(2, 100)),
+                    )
+                )
             for i in range(4):
-                objs.append(SeniorPrivilegeCheckIn(
-                    student=s,
-                    device_id=uuid.uuid4().hex,
-                    checked_out=random.random() > 0.5,
-                    check_out_date=datetime.now(timezone.utc)
-                ))
+                objs.append(
+                    SeniorPrivilegeCheckIn(
+                        student=s,
+                        device_id=uuid.uuid4().hex,
+                        checked_out=random.random() > 0.5,
+                        check_out_date=datetime.now(timezone.utc),
+                    )
+                )
         await SeniorPrivilegeCheckIn.objects.abulk_create(objs)
-
 
     @router.get("/test/eraseSpCheckIns/")
     async def erase_sp_check_ins(request):

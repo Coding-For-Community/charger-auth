@@ -14,7 +14,7 @@ class StudentsAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
     formfield_overrides = {
-        BitField: {'widget': BitFieldCheckboxSelectMultiple},
+        BitField: {"widget": BitFieldCheckboxSelectMultiple},
     }
 
 

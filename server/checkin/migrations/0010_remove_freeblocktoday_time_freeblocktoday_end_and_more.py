@@ -5,31 +5,34 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0009_alter_seniorprivilegecheckin_student'),
+        ("checkin", "0009_alter_seniorprivilegecheckin_student"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='freeblocktoday',
-            name='time',
+            model_name="freeblocktoday",
+            name="time",
         ),
         migrations.AddField(
-            model_name='freeblocktoday',
-            name='end',
-            field=models.DateTimeField(default=datetime.datetime(2025, 10, 13, 18, 54, 59, 583908)),
+            model_name="freeblocktoday",
+            name="end",
+            field=models.DateTimeField(
+                default=datetime.datetime(2025, 10, 13, 18, 54, 59, 583908)
+            ),
             preserve_default=False,
         ),
         migrations.AddField(
-            model_name='freeblocktoday',
-            name='start',
-            field=models.DateTimeField(default=datetime.datetime(2025, 10, 13, 18, 55, 7, 962381)),
+            model_name="freeblocktoday",
+            name="start",
+            field=models.DateTimeField(
+                default=datetime.datetime(2025, 10, 13, 18, 55, 7, 962381)
+            ),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='seniorprivilegecheckin',
-            name='check_out_date',
+            model_name="seniorprivilegecheckin",
+            name="check_out_date",
             field=models.DateTimeField(),
         ),
     ]

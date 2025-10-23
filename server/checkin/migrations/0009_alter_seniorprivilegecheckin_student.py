@@ -5,15 +5,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0008_remove_seniorprivilegesban_id_and_more'),
+        ("checkin", "0008_remove_seniorprivilegesban_id_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='seniorprivilegecheckin',
-            name='student',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='checkin.student'),
+            model_name="seniorprivilegecheckin",
+            name="student",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="checkin.student"
+            ),
         ),
     ]

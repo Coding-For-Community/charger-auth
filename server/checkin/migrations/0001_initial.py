@@ -6,62 +6,134 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='BgExecutorMsgs',
+            name="BgExecutorMsgs",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('desire_manual_reset', models.BooleanField(default=False)),
-                ('seniors_grad_year', models.PositiveSmallIntegerField(default=2026)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("desire_manual_reset", models.BooleanField(default=False)),
+                ("seniors_grad_year", models.PositiveSmallIntegerField(default=2026)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='FreeBlockToday',
+            name="FreeBlockToday",
             fields=[
-                ('block', models.CharField(max_length=1, primary_key=True, serialize=False, validators=[django.core.validators.RegexValidator('[A-G]')])),
-                ('time', models.TimeField()),
+                (
+                    "block",
+                    models.CharField(
+                        max_length=1,
+                        primary_key=True,
+                        serialize=False,
+                        validators=[django.core.validators.RegexValidator("[A-G]")],
+                    ),
+                ),
+                ("time", models.TimeField()),
             ],
         ),
         migrations.CreateModel(
-            name='Student',
+            name="Student",
             fields=[
-                ('email', models.EmailField(max_length=200, primary_key=True, serialize=False)),
-                ('free_blocks', models.CharField(blank=True, default='', max_length=8, validators=[django.core.validators.RegexValidator('[A-G]*')])),
-                ('name', models.CharField(default='[Unknown]', max_length=100)),
-                ('has_sp', models.BooleanField(default=False)),
+                (
+                    "email",
+                    models.EmailField(
+                        max_length=200, primary_key=True, serialize=False
+                    ),
+                ),
+                (
+                    "free_blocks",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        max_length=8,
+                        validators=[django.core.validators.RegexValidator("[A-G]*")],
+                    ),
+                ),
+                ("name", models.CharField(default="[Unknown]", max_length=100)),
+                ("has_sp", models.BooleanField(default=False)),
             ],
         ),
         migrations.CreateModel(
-            name='SeniorPrivilegeCheckIn',
+            name="SeniorPrivilegeCheckIn",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('checked_out', models.BooleanField()),
-                ('date', models.DateTimeField(auto_now=True)),
-                ('video', models.FileField(upload_to='checkin_vids/')),
-                ('student', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='checkin.student')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("checked_out", models.BooleanField()),
+                ("date", models.DateTimeField(auto_now=True)),
+                ("video", models.FileField(upload_to="checkin_vids/")),
+                (
+                    "student",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="checkin.student",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='FreePeriodCheckIn',
+            name="FreePeriodCheckIn",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('date', models.DateTimeField(auto_now_add=True)),
-                ('free_block_idx', models.PositiveSmallIntegerField(choices=[(0, 'A'), (1, 'B'), (2, 'C'), (3, 'D'), (4, 'E'), (5, 'F'), (6, 'G')])),
-                ('device_id', models.CharField(max_length=32)),
-                ('video', models.FileField(blank=True, upload_to='checkin_vids/')),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='checkin.student')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("date", models.DateTimeField(auto_now_add=True)),
+                (
+                    "free_block_idx",
+                    models.PositiveSmallIntegerField(
+                        choices=[
+                            (0, "A"),
+                            (1, "B"),
+                            (2, "C"),
+                            (3, "D"),
+                            (4, "E"),
+                            (5, "F"),
+                            (6, "G"),
+                        ]
+                    ),
+                ),
+                ("device_id", models.CharField(max_length=32)),
+                ("video", models.FileField(blank=True, upload_to="checkin_vids/")),
+                (
+                    "student",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="checkin.student",
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('device_id', 'free_block_idx'), name='unique_device_id')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("device_id", "free_block_idx"), name="unique_device_id"
+                    )
+                ],
             },
         ),
     ]

@@ -5,20 +5,28 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('checkin', '0001_initial'),
+        ("checkin", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SubscriptionData',
+            name="SubscriptionData",
             fields=[
-                ('subscription', models.JSONField()),
-                ('device_id', models.CharField(max_length=400, primary_key=True, serialize=False)),
-                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='checkin.student')),
+                ("subscription", models.JSONField()),
+                (
+                    "device_id",
+                    models.CharField(max_length=400, primary_key=True, serialize=False),
+                ),
+                (
+                    "student",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="checkin.student",
+                    ),
+                ),
             ],
         ),
     ]

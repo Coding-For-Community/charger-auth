@@ -83,7 +83,7 @@ function Index() {
     <AppShell>
       <AppShell.Header>
         <Group m={10} justify="space-between">
-          <img src="icon.svg" width={rem(25)} height={rem(25)} />
+          <img src="ca-icon.png" width={30} height={30} />
           <Title order={3}>ChargerAuth</Title>
           <ActionIcon
             variant="transparent"

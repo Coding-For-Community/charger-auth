@@ -5,25 +5,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0006_seniorprivilegesallowedfor_delete_persistentstate_and_more'),
+        ("checkin", "0006_seniorprivilegesallowedfor_delete_persistentstate_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SeniorPrivilegesBan',
+            name="SeniorPrivilegesBan",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('is_for', models.CharField(max_length=45, validators=[checkin.models.email_or_everyone])),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "is_for",
+                    models.CharField(
+                        max_length=45, validators=[checkin.models.email_or_everyone]
+                    ),
+                ),
             ],
         ),
         migrations.DeleteModel(
-            name='SeniorPrivilegesAllowedFor',
+            name="SeniorPrivilegesAllowedFor",
         ),
         migrations.AlterField(
-            model_name='student',
-            name='email',
+            model_name="student",
+            name="email",
             field=models.EmailField(max_length=45, primary_key=True, serialize=False),
         ),
     ]

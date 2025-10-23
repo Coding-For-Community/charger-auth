@@ -9,4 +9,3 @@ class RegisterSchema(Schema):
     email: str
     subscription: dict
     device_id: str
-

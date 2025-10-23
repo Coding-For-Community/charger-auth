@@ -4,13 +4,26 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from django.http import HttpRequest
-from future.backports.datetime import timezone
 
-from checkin.core.errors import DeviceIdConflict, InvalidStudent, ModeRequiredForSenior, NoFreeBlock, UseEmailInstead, \
-    HasNotCheckedOut, NoSeniorPrivileges, Http400
+from checkin.core.errors import (
+    DeviceIdConflict,
+    InvalidStudent,
+    ModeRequiredForSenior,
+    NoFreeBlock,
+    UseEmailInstead,
+    HasNotCheckedOut,
+    NoSeniorPrivileges,
+    Http400,
+)
 from checkin.core.get_now import get_now
 from checkin.core.consts import FreeBlock, CheckInOption, US_EASTERN, SP_ADDENDUM
-from checkin.models import FreeBlockToday, Student, FreePeriodCheckIn, SeniorPrivilegeCheckIn, SeniorPrivilegesBan
+from checkin.models import (
+    FreeBlockToday,
+    Student,
+    FreePeriodCheckIn,
+    SeniorPrivilegeCheckIn,
+    SeniorPrivilegesBan,
+)
 from oauth.api import oauth_client
 
 logger = logging.getLogger(__name__)
@@ -63,11 +76,12 @@ async def parse_email(email_or_id: str):
         raise InvalidStudent
 
 
-async def get_check_in_record(email: str, mode: CheckInOption, device_id: str) -> CheckInRecord | Http400:
+async def get_check_in_record(
+    email: str, mode: CheckInOption, device_id: str
+) -> CheckInRecord | Http400:
     email = email.lower()
     free_block, student = await asyncio.gather(
-        get_curr_free_block(),
-        Student.objects.filter(email=email).afirst()
+        get_curr_free_block(), Student.objects.filter(email=email).afirst()
     )
     if student is None:
         return InvalidStudent()
@@ -118,9 +132,7 @@ async def get_emails_from_grad_year(grad_year: int):
 
     client = await oauth_client()
     res = await client.get(f"/users?roles=4180&grad_year={grad_year}")
-    return [
-        data.get("email") for data in res.json()["value"] if data.get("email")
-    ]
+    return [data.get("email") for data in res.json()["value"] if data.get("email")]
 
 
 async def get_perms(request: HttpRequest):
@@ -135,8 +147,7 @@ async def get_perms(request: HttpRequest):
 
 def fmt_eastern_date(text: str | None):
     return (
-        datetime
-            .strptime(text, "%Y-%m-%d %H:%M:%S")
-            .astimezone(US_EASTERN)
-            if text and text != "null" else None
+        datetime.strptime(text, "%Y-%m-%d %H:%M:%S").astimezone(US_EASTERN)
+        if text and text != "null"
+        else None
     )

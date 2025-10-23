@@ -5,19 +5,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0007_seniorprivilegesban_and_more'),
+        ("checkin", "0007_seniorprivilegesban_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='seniorprivilegesban',
-            name='id',
+            model_name="seniorprivilegesban",
+            name="id",
         ),
         migrations.AlterField(
-            model_name='seniorprivilegesban',
-            name='is_for',
-            field=models.CharField(max_length=45, primary_key=True, serialize=False, validators=[checkin.models.email_or_everyone]),
+            model_name="seniorprivilegesban",
+            name="is_for",
+            field=models.CharField(
+                max_length=45,
+                primary_key=True,
+                serialize=False,
+                validators=[checkin.models.email_or_everyone],
+            ),
         ),
     ]

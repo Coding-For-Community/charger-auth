@@ -4,20 +4,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0002_alter_seniorprivilegecheckin_video'),
+        ("checkin", "0002_alter_seniorprivilegecheckin_video"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='seniorprivilegecheckin',
-            name='device_id',
-            field=models.CharField(default='', max_length=32),
+            model_name="seniorprivilegecheckin",
+            name="device_id",
+            field=models.CharField(default="", max_length=32),
             preserve_default=False,
         ),
         migrations.AddConstraint(
-            model_name='freeperiodcheckin',
-            constraint=models.UniqueConstraint(fields=('student', 'free_block_idx'), name='unique_student'),
+            model_name="freeperiodcheckin",
+            constraint=models.UniqueConstraint(
+                fields=("student", "free_block_idx"), name="unique_student"
+            ),
         ),
     ]

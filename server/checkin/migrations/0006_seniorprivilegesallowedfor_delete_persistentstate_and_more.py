@@ -4,39 +4,46 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('checkin', '0005_persistentstate_delete_bgexecutormsgs_and_more'),
+        ("checkin", "0005_persistentstate_delete_bgexecutormsgs_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SeniorPrivilegesAllowedFor',
+            name="SeniorPrivilegesAllowedFor",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('email', models.EmailField(max_length=200)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("email", models.EmailField(max_length=200)),
             ],
         ),
         migrations.DeleteModel(
-            name='PersistentState',
+            name="PersistentState",
         ),
         migrations.RemoveField(
-            model_name='student',
-            name='has_sp',
+            model_name="student",
+            name="has_sp",
         ),
         migrations.AddField(
-            model_name='student',
-            name='is_senior',
+            model_name="student",
+            name="is_senior",
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name='student',
-            name='email',
+            model_name="student",
+            name="email",
             field=models.EmailField(max_length=50, primary_key=True, serialize=False),
         ),
         migrations.AlterField(
-            model_name='student',
-            name='name',
-            field=models.CharField(default='[Unknown]', max_length=30),
+            model_name="student",
+            name="name",
+            field=models.CharField(default="[Unknown]", max_length=30),
         ),
     ]

@@ -30,13 +30,11 @@ class FreePeriodCheckIn(models.Model):
     """
 
     student = models.ForeignKey(
-        Student,
-        on_delete=models.CASCADE,
-        related_name="fp_records"
+        Student, on_delete=models.CASCADE, related_name="fp_records"
     )
     free_block_idx = models.PositiveSmallIntegerField(
         choices=[(i, ALL_FREE_BLOCKS[i]) for i in range(len(ALL_FREE_BLOCKS))]
-    ) # Use PositiveSmallIntegerField for faster write speeds
+    )  # Use PositiveSmallIntegerField for faster write speeds
     device_id = models.CharField(max_length=32)
     video = models.FileField(upload_to="checkin_vids/", blank=True)
 
@@ -60,7 +58,7 @@ class FreePeriodCheckIn(models.Model):
             ),
             models.UniqueConstraint(
                 fields=["student", "free_block_idx"], name="unique_student"
-            )
+            ),
         ]
 
 
@@ -84,15 +82,17 @@ class SeniorPrivilegeCheckIn(models.Model):
         Fetches a dict representation of this model.
         To call this method, you must use select_related('students') in the iterator clause.
         """
-        status = f"{"tentative" if self.video else "checked"}_{"out" if self.checked_out else "in"}"
-        date_fmt = f"{self.check_out_date.astimezone(US_EASTERN).strftime("%I:%M %p")}"
+        status = f"{'tentative' if self.video else 'checked'}_{'out' if self.checked_out else 'in'}"
+        date_fmt = f"{self.check_out_date.astimezone(US_EASTERN).strftime('%I:%M %p')}"
         if self.check_in_date:
-            date_fmt += f" - {self.check_in_date.astimezone(US_EASTERN).strftime("%I:%M %p")}"
+            date_fmt += (
+                f" - {self.check_in_date.astimezone(US_EASTERN).strftime('%I:%M %p')}"
+            )
         return {
             "name": self.student.name,
             "email": self.student.email,
             "status": status,
-            "date_str": date_fmt
+            "date_str": date_fmt,
         }
 
 
@@ -117,9 +117,7 @@ class SeniorPrivilegesBan(models.Model):
     # No foreign key relationship here
     # since we are periodically deleting & resetting Student(s).
     is_for = models.CharField(
-        max_length=45,
-        validators=[email_or_everyone],
-        primary_key=True
+        max_length=45, validators=[email_or_everyone], primary_key=True
     )
 
     @classmethod
@@ -132,4 +130,3 @@ class SeniorPrivilegesBan(models.Model):
 def auto_delete_videos(sender, instance, **kwargs):
     if instance.video and os.path.isfile(instance.video.path):
         os.remove(instance.video.path)
-
