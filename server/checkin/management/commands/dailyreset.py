@@ -15,6 +15,12 @@ from notifs.models import SubscriptionData
 logger = logging.getLogger(__name__)
 load_dotenv()
 
+US_LEVEL = os.environ["UPPER_SCHOOL_LEVEL_NUM"]
+STUDENTS_ROLE = os.environ["STUDENTS_ROLE_NUM"]
+SCHED_SET_ID = os.environ["SCHEDULE_SET_ID"]
+print(f"Upper School level number: {US_LEVEL};")
+print(f"Students Role Num: {STUDENTS_ROLE};")
+print(f"Schedule Set ID: {SCHED_SET_ID}")
 
 class Command(BaseCommand):
     help = "When run, periodically resets the database data at a certain time(7:00 by default) every day"
@@ -46,7 +52,7 @@ class Command(BaseCommand):
     async def main(self, scheduled_time: str, dont_run_initial: bool):
         logger.info("Daily reset task started.")
         if not dont_run_initial:
-            await self.daily_reset(False)
+            await self.daily_reset(True)
         schedule.every().day.at(scheduled_time).do(
             lambda: asyncio.create_task(self.daily_reset(True))
         )
@@ -65,10 +71,11 @@ class Command(BaseCommand):
         await FreeBlockToday.objects.all().adelete()
         if reset_state:
             await FreePeriodCheckIn.objects.all().adelete()
-            if now.month == 8 and now.day == 1:
-                await Student.objects.all().adelete()
-            else:
-                await Student.objects.all().aupdate(free_blocks=0)
+            await Student.objects.all().adelete()
+            # if now.month == 8 and now.day == 1:
+            #     await Student.objects.all().adelete()
+            # else:
+            #     await Student.objects.all().aupdate(free_blocks=0)
 
         from oauth.api import oauth_client
 
@@ -80,10 +87,10 @@ class Command(BaseCommand):
         results = await asyncio.gather(
             client.get("/academics/rosters"),
             client.get(
-                f"/academics/schedules/master?"
-                f"level_num=453&start_date={today_as_str}&end_date={today_as_str}",
+                f"/academics/schedules/master?level_num={US_LEVEL}"
+                f"&start_date={today_as_str}&end_date={today_as_str}",
             ),
-            client.get(f"/users?roles=4180&grad_year={senior_year}"),
+            client.get(f"/users?roles={STUDENTS_ROLE}&grad_year={senior_year}"),
         )
         for result in results:
             result.raise_for_status()
@@ -92,8 +99,6 @@ class Command(BaseCommand):
         # Resets the cached schedule for today
         calendar_data = calendar_res.json()
         for schedule_set in calendar_data["value"][0]["schedule_sets"]:
-            if schedule_set["schedule_set_id"] != 3051:
-                continue
             for block in schedule_set["blocks"]:
                 if block["block"] not in ALL_FREE_BLOCKS:
                     continue
@@ -180,6 +185,8 @@ class Command(BaseCommand):
     def _free_block_of(self, course: dict) -> FreeBlock | None:
         now = get_now()
         name = course["section"]["name"]
+        if "free period" not in name.lower():
+            return None
         is_correct_sem = (now.month <= 5 and "S2" in name) or (
             now.month >= 7 and "S1" in name
         )

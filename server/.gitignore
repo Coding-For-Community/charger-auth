@@ -1,10 +1,9 @@
 .venv
 __pycache__
-staticfiles
+staticfiles/
+static/
 dev.sqlite3*
-lts.dev.sqlite3*
 prod.sqlite3*
-lts.prod.sqlite3*
 .env
 media/
 logs/

@@ -43,5 +43,4 @@ class BlackbaudToken(models.Model):
         ).asave()
 
 
-if settings.DEBUG:
-    admin.site.register(BlackbaudToken)
+admin.site.register(BlackbaudToken)
