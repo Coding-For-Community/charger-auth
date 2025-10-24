@@ -1,6 +1,7 @@
 import logging
 import sys
 
+from datetime import datetime
 from ninja.errors import ValidationError
 
 import oauth.api
@@ -24,6 +25,7 @@ try:
     @api.get("/")
     def home(request):
         logger.info("Home Visit")
+        print(datetime.now())
         return "Whassup"
 
     @api.exception_handler(Http400)

@@ -23,5 +23,4 @@ from config import settings
 from config.api import api
 
 urlpatterns = [path("admin/", admin.site.urls), path("", api.urls)]
-
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

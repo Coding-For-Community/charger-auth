@@ -9,6 +9,8 @@ import logging
 import os
 import ninja
 
+from httpx import Timeout
+from django.shortcuts import redirect
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from dotenv import load_dotenv
 from config import settings
@@ -42,10 +44,20 @@ oauth = AsyncOAuth2Client(
     update_token=__update_token_impl,
     token_endpoint="https://oauth2.sky.blackbaud.com/token",
     base_url="https://api.sky.blackbaud.com/school/v1/",
+    timeout=Timeout(20.0, read=30.0),
     headers={"Bb-Api-Subscription-Key": os.environ["BLACKBAUD_SUBSCRIPTION_KEY"]},
 )
 
 router = ninja.Router()
+
+@router.get("/")
+async def run_flow(request):
+    client = await oauth_client(fetch_token=False)
+    auth_url, _ = client.create_authorization_url(
+        "https://oauth2.sky.blackbaud.com/authorization",
+        redirect_uri="https://crack-monkfish-monthly.ngrok-free.app/oauth/authorize/",
+    )
+    return redirect(auth_url)
 
 
 @router.get("/authorize/")
@@ -56,7 +68,7 @@ async def authorize(request):
         redirect_uri=request.build_absolute_uri("/oauth/authorize/"),
     )
     await BlackbaudToken.reset_from_dict(token)
-    return {"token": token}
+    return {"success": True}
 
 
 if settings.DEBUG:

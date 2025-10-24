@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from dotenv import load_dotenv
 import json
 import os
-import sys
 
 from pathlib import Path
 from corsheaders.defaults import default_headers
@@ -28,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG')
+DEBUG = True
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = (
@@ -58,8 +57,10 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.middleware.common.CommonMiddleware"
+]
+MIDDLEWARE += ["django.middleware.csrf.CsrfViewMiddleware"]
+MIDDLEWARE += [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -73,9 +74,24 @@ if DEBUG:
         "http://169.254.17.243:5173",
         "http://127.0.0.1:5173",
         "https://coding-for-community.github.io",
+	    "https://crack-monkfish-monthly.ngrok-free.app"
     ]
 else:
-    CORS_ALLOWED_ORIGINS = ["https://coding-for-community.github.io"]
+    CORS_ALLOWED_ORIGINS = [
+        "https://coding-for-community.github.io",
+        "https://crack-monkfish-monthly.ngrok-free.app"
+    ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://192.168.1.187:5173",
+    "http://169.254.17.243:5173",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8001",
+    "https://coding-for-community.github.io",
+    "https://crack-monkfish-monthly.ngrok-free.app"
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -152,8 +168,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_URL = "http://127.0.0.1:8000/static/"
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "admin", "static")
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
