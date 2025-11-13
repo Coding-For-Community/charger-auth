@@ -48,7 +48,7 @@ async def get_curr_free_block() -> FreeBlock | None:
 async def get_next_free_block() -> (FreeBlock | None, float):
     now = get_now()
     async for item in FreeBlockToday.objects.all():
-        delta_secs = (item.start - now).total_seconds()
+        delta_secs = (now - item.start).total_seconds()
         if delta_secs < 0:
             return item.block, abs(delta_secs)
     # If we're done for free blocks for today, re-send a request at tomorrow 8:30

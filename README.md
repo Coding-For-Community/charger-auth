@@ -41,7 +41,7 @@ py manage.py dailyreset
 Then, create another terminal and run:
 ```bash
 cd path_to_chargerauth/server
-py -m http.server 8001 --bind 127.0.0.1
+py -m http.server 8000 --bind 127.0.0.1
 ```
 
 ### How to run: frontend
