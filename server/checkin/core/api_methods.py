@@ -37,9 +37,12 @@ class CheckInRecord:
 
 async def get_curr_free_block() -> FreeBlock | None:
     now = get_now()
+    logger.info("Hi???")
     async for item in FreeBlockToday.objects.all():
         time_from_start = (now - item.start).total_seconds()
         time_from_end = (item.end - now).total_seconds()
+        logger.info(f"Start: {time_from_start}")
+        logger.info(f"End: {time_from_end}")
         if time_from_start > 0 and time_from_end > 0:
             return item.block
     return None

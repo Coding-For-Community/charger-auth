@@ -1,12 +1,14 @@
+import os
+
 from asgiref.sync import sync_to_async
 from bitfield import BitField
-from django.core.validators import RegexValidator, EmailValidator
+from checkin.core.consts import (ALL_FREE_BLOCKS, EVERYONE_KW, US_EASTERN,
+                                 FreeBlock)
+from django.core.validators import EmailValidator, RegexValidator
 from django.db import models
-from solo.models import SingletonModel
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-import os
-from checkin.core.consts import FreeBlock, ALL_FREE_BLOCKS, US_EASTERN, EVERYONE_KW
+from solo.models import SingletonModel
 
 
 class Student(models.Model):
@@ -22,6 +24,15 @@ class Student(models.Model):
     @classmethod
     def as_bit_str(cls, free_block: FreeBlock) -> int:
         return getattr(cls.free_blocks, free_block)
+
+
+class Advisor(models.Model):
+    """
+    A cary academy advisor
+    """
+
+    email = models.EmailField(max_length=45, primary_key=True)
+    name = models.CharField(max_length=30, default="[Unknown]")
 
 
 class FreePeriodCheckIn(models.Model):
@@ -94,6 +105,21 @@ class SeniorPrivilegeCheckIn(models.Model):
             "status": status,
             "date_str": date_fmt,
         }
+
+
+class TownHallCheckIn(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    device_id = models.CharField(max_length=32)
+    video = models.FileField(upload_to="checkin_vids/", blank=True)
+
+
+class TownHallMeetingToday(models.Model):
+    """
+    Represents a new Town hall meeting.
+    """
+
+    start = models.DateTimeField()
+    end = models.DateTimeField()
 
 
 class FreeBlockToday(models.Model):
