@@ -1,0 +1,5 @@
+import{r as d,j as t}from"./index-h6q0-UoG.js";import{T as m}from"./Title-BEYaKuXM.js";import{T as r}from"./Text-BBiES6Pi.js";import{B as g}from"./Button-W3m6MCJG.js";import"./polymorphic-factory-DRyt3j_Z.js";import"./Loader-CGv60UkV.js";import"./UnstyledButton-vHIHmcNZ.js";const i=[35.8201,35.8205],a=[-78.7695,-78.7689];function y(){const[s,c]=d.useState("");return t.jsxs(t.Fragment,{children:[t.jsx(m,{order:3,ta:"center",mb:"xs",children:"Town Hall Check-In"}),t.jsx(r,{children:"Automatic town hall check-ins require your current location (to ensure that you aren't off and away). If you don't like this, it's totally fine - just check-in manually with your advisor."}),t.jsx(g,{onClick:()=>{navigator.geolocation.getCurrentPosition(e=>{const o=e.coords.latitude,n=e.coords.longitude,l=o>i[0]&&o<i[1],u=n>a[0]&&n<a[1];c(`
+            Latitude: ${o}, Longitude: ${n}, 
+ 
+            Latitude in Range: ${l}, Longitude in Range: ${u}
+            `)})},children:"Approve check-in"}),t.jsx(r,{children:s})]})}export{y as component};
