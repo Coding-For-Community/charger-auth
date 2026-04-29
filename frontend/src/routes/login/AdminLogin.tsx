@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { fetchBackend } from "../../api/fetchBackend";
-import { SignInButton } from "../../components/SignInButton";
+import { LogInButton } from "../../components/LogInButton";
 
 export const Route = createFileRoute("/login/AdminLogin")({
   component: AdminLogin,
@@ -66,7 +66,7 @@ function AdminLogin() {
             {error}
           </Text>
         )}
-        <SignInButton submitting={loginM.isPending} />
+        <LogInButton submitting={loginM.isPending} />
       </form>
     </Paper>
   );

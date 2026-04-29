@@ -25,6 +25,7 @@ import "@mantine/core/styles/Paper.css";
 import "@mantine/core/styles/ScrollArea.css";
 import "@mantine/core/styles/Card.css";
 import "@mantine/core/styles/Stack.css";
+import "@mantine/core/styles/PasswordInput.css";
 
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

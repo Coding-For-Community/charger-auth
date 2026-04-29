@@ -1,14 +1,14 @@
 import React from "react";
-import classes from "./SignInButton.module.css"; // Import the CSS file for styling
+import classes from "./LogInButton.module.css";
 
-interface SignInButtonProps {
+interface LogInButtonProps {
   buttonStyle?: React.CSSProperties;
   textStyle?: React.CSSProperties;
   submitting?: boolean;
   onClick?: () => void;
 }
 
-export function SignInButton(props: SignInButtonProps) {
+export function LogInButton(props: LogInButtonProps) {
   return (
     <button
       className={classes.primaryButton}
@@ -17,7 +17,7 @@ export function SignInButton(props: SignInButtonProps) {
       onClick={props.onClick}
     >
       <span className={classes.primaryButtonText} style={props.textStyle}>
-        {props.submitting ? "Signing In...." : "Sign In"}
+        {props.submitting ? "Logging In...." : "Log In"}
       </span>
     </button>
   );

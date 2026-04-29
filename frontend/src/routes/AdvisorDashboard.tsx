@@ -17,10 +17,10 @@ import {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from "react";
+import z from "zod";
 import { fetchBackend } from "../api/fetchBackend";
 import { IconPlus, IconTrash } from "../components/icons";
 import { alertNotif } from "../utils/alertNotif";
-import z from "zod";
 
 export const Route = createFileRoute('/AdvisorDashboard')({
   component: AdvisorDashboard,
@@ -125,7 +125,11 @@ function AdvisorDashboard() {
   })
 
   if (!adviseesQ.isSuccess) {
-    return <Loader />
+    return (
+      <Stack align="center" justify="center" style={{ minHeight: "100vh" }}>
+        <Loader size="xl" />
+      </Stack>
+    );
   }
 
   let modalContent = <Loader />;

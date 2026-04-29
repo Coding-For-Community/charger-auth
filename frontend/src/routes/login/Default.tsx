@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { fetchBackend } from "../../api/fetchBackend";
-import { SignInButton } from "../../components/SignInButton";
+import { LogInButton } from "../../components/LogInButton";
 import { EMAIL_KEY } from "../../utils/constants";
 
 export const Route = createFileRoute("/login/Default")({
@@ -85,7 +85,7 @@ function DefaultLogin() {
           mb={rem(20)}
         />
         <Group justify="center" gap="md">
-          <SignInButton submitting={loginRunner.isPending} />
+          <LogInButton submitting={loginRunner.isPending} />
           <Button
             variant="outline"
             color="indigo"

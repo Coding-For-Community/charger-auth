@@ -1,9 +1,9 @@
 import { Button, Modal, Stack, TextInput, Title } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { fetchBackend } from "../api/fetchBackend";
-import { SignInButton } from "./SignInButton";
 import { type ModeOption, parseCheckInRes } from "../api/checkIn";
+import { fetchBackend } from "../api/fetchBackend";
+import { LogInButton } from "./LogInButton";
 import { ModeSelectComponent } from "./ModeSelect";
 import { IconCheck } from "./icons";
 
@@ -84,7 +84,7 @@ export default function ManualCheckInModal(props: ManualCheckInProps) {
                 mb={20}
                 labelProps={{ size: "sm" }}
               />
-              <SignInButton submitting={checkinQ.isFetching} />
+              <LogInButton submitting={checkinQ.isFetching} />
             </form>
           </>
         )}

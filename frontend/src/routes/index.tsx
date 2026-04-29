@@ -173,6 +173,15 @@ function Index() {
               muted
             />
           </Card>
+          {/* Add the big Check in for town hall button */}
+          <Button
+            size="xl"
+            radius="xl"
+            mt={rem(30)}
+            style={{ width: 320, fontSize: 24 }}
+          >
+            Check in for town hall
+          </Button>
         </Stack>
       </AppShell.Main>
 

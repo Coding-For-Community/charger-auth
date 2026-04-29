@@ -1,10 +1,10 @@
-import { Button, Group, rem, Select, Stack, Text, TextInput } from "@mantine/core";
+import { Button, Group, Loader, PasswordInput, rem, Select, Stack, Text } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { fetchBackend } from "../../api/fetchBackend";
-import { SignInButton } from "../../components/SignInButton";
 import z from "zod";
+import { fetchBackend } from "../../api/fetchBackend";
+import { LogInButton } from "../../components/LogInButton";
 
 export const Route = createFileRoute("/login/AdvisorLogin")({
   component: AdvisorLogin
@@ -48,11 +48,9 @@ function AdvisorLogin() {
         credentials: "include",
         body: JSON.stringify({ kind: "advisor", email, password }),
       });
-      return (await res.json())["success"] as boolean;
-    },
-    onSuccess: (success) => {
+      const success = (await res.json())["success"] as boolean;
       if (success) {
-        navigate({ to: "/AdvisorDashboard" });
+        navigate({ to: "/AdvisorDashboard" })
       } else {
         window.alert("Invalid password. Please try again.");
       }
@@ -61,7 +59,14 @@ function AdvisorLogin() {
       window.alert("An error occurred. Please try again.");
     },
   });
-  
+
+  if (!advisorsQ.isSuccess) {
+    return (
+      <Stack align="center" justify="center" style={{ minHeight: "100vh" }}>
+        <Loader size="xl" />
+      </Stack>
+    );
+  }
 
   return (
     <Stack
@@ -80,18 +85,18 @@ function AdvisorLogin() {
       >
         Advisor Login
       </Text>
+      <Select 
+        value={advisorName}
+        onChange={setAdvisorName}
+        data={advisorsQ.data?.map(data => data.name)}
+        placeholder="Search Advisor Name"
+        searchable={true}
+        size="lg"
+        radius={12}
+        mb={rem(20)}
+      />
       <form onSubmit={loginRunner.mutate}>
-        <Select 
-          value={advisorName}
-          onChange={setAdvisorName}
-          data={advisorsQ.data?.map(data => data.name)}
-          label="Search Advisor Name"
-          searchable={true}
-          size="lg"
-          radius={12}
-          mb={rem(20)}
-        />
-        <TextInput
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
@@ -100,7 +105,7 @@ function AdvisorLogin() {
           mb={rem(20)}
         />
         <Group justify="center" gap="md">
-          <SignInButton submitting={loginRunner.isPending} />
+          <LogInButton submitting={loginRunner.isPending} />
           <Button
             variant="outline"
             color="indigo"
