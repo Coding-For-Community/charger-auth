@@ -1,6 +1,6 @@
 import { Paper, rem, Text, TextInput, Title } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate, createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { fetchBackend } from "../../api/fetchBackend";
 import { LogInButton } from "../../components/LogInButton";

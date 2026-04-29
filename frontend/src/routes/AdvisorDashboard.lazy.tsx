@@ -15,14 +15,14 @@ import {
   Title
 } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useNavigate, createLazyFileRoute } from '@tanstack/react-router';
 import { useState } from "react";
 import z from "zod";
 import { fetchBackend } from "../api/fetchBackend";
 import { IconPlus, IconTrash } from "../components/icons";
 import { alertNotif } from "../utils/alertNotif";
 
-export const Route = createFileRoute('/AdvisorDashboard')({
+export const Route = createLazyFileRoute('/AdvisorDashboard')({
   component: AdvisorDashboard,
 });
 

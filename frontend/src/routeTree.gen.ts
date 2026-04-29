@@ -11,18 +11,22 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as GeoLocationTestRouteImport } from './routes/GeoLocationTest'
 import { Route as CheckInPageRouteImport } from './routes/CheckInPage'
-import { Route as AdvisorDashboardRouteImport } from './routes/AdvisorDashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginDefaultRouteImport } from './routes/login/Default'
-import { Route as LoginAdvisorSignupRouteImport } from './routes/login/AdvisorSignup'
-import { Route as LoginAdvisorLoginRouteImport } from './routes/login/AdvisorLogin'
 import { Route as LoginAdminLoginRouteImport } from './routes/login/AdminLogin'
 
 const WelcomeLazyRouteImport = createFileRoute('/Welcome')()
 const KioskPageLazyRouteImport = createFileRoute('/KioskPage')()
+const GeoLocationTestLazyRouteImport = createFileRoute('/GeoLocationTest')()
+const AdvisorDashboardLazyRouteImport = createFileRoute('/AdvisorDashboard')()
 const AdminLazyRouteImport = createFileRoute('/Admin')()
+const LoginAdvisorSignupLazyRouteImport = createFileRoute(
+  '/login/AdvisorSignup',
+)()
+const LoginAdvisorLoginLazyRouteImport = createFileRoute(
+  '/login/AdvisorLogin',
+)()
 
 const WelcomeLazyRoute = WelcomeLazyRouteImport.update({
   id: '/Welcome',
@@ -34,24 +38,28 @@ const KioskPageLazyRoute = KioskPageLazyRouteImport.update({
   path: '/KioskPage',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/KioskPage.lazy').then((d) => d.Route))
+const GeoLocationTestLazyRoute = GeoLocationTestLazyRouteImport.update({
+  id: '/GeoLocationTest',
+  path: '/GeoLocationTest',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/GeoLocationTest.lazy').then((d) => d.Route),
+)
+const AdvisorDashboardLazyRoute = AdvisorDashboardLazyRouteImport.update({
+  id: '/AdvisorDashboard',
+  path: '/AdvisorDashboard',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/AdvisorDashboard.lazy').then((d) => d.Route),
+)
 const AdminLazyRoute = AdminLazyRouteImport.update({
   id: '/Admin',
   path: '/Admin',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/Admin.lazy').then((d) => d.Route))
-const GeoLocationTestRoute = GeoLocationTestRouteImport.update({
-  id: '/GeoLocationTest',
-  path: '/GeoLocationTest',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const CheckInPageRoute = CheckInPageRouteImport.update({
   id: '/CheckInPage',
   path: '/CheckInPage',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdvisorDashboardRoute = AdvisorDashboardRouteImport.update({
-  id: '/AdvisorDashboard',
-  path: '/AdvisorDashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -59,19 +67,23 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginDefaultRoute = LoginDefaultRouteImport.update({
-  id: '/login/Default',
-  path: '/login/Default',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginAdvisorSignupRoute = LoginAdvisorSignupRouteImport.update({
+const LoginAdvisorSignupLazyRoute = LoginAdvisorSignupLazyRouteImport.update({
   id: '/login/AdvisorSignup',
   path: '/login/AdvisorSignup',
   getParentRoute: () => rootRouteImport,
-} as any)
-const LoginAdvisorLoginRoute = LoginAdvisorLoginRouteImport.update({
+} as any).lazy(() =>
+  import('./routes/login/AdvisorSignup.lazy').then((d) => d.Route),
+)
+const LoginAdvisorLoginLazyRoute = LoginAdvisorLoginLazyRouteImport.update({
   id: '/login/AdvisorLogin',
   path: '/login/AdvisorLogin',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/login/AdvisorLogin.lazy').then((d) => d.Route),
+)
+const LoginDefaultRoute = LoginDefaultRouteImport.update({
+  id: '/login/Default',
+  path: '/login/Default',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginAdminLoginRoute = LoginAdminLoginRouteImport.update({
@@ -82,98 +94,98 @@ const LoginAdminLoginRoute = LoginAdminLoginRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/AdvisorDashboard': typeof AdvisorDashboardRoute
   '/CheckInPage': typeof CheckInPageRoute
-  '/GeoLocationTest': typeof GeoLocationTestRoute
   '/Admin': typeof AdminLazyRoute
+  '/AdvisorDashboard': typeof AdvisorDashboardLazyRoute
+  '/GeoLocationTest': typeof GeoLocationTestLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
   '/login/AdminLogin': typeof LoginAdminLoginRoute
-  '/login/AdvisorLogin': typeof LoginAdvisorLoginRoute
-  '/login/AdvisorSignup': typeof LoginAdvisorSignupRoute
   '/login/Default': typeof LoginDefaultRoute
+  '/login/AdvisorLogin': typeof LoginAdvisorLoginLazyRoute
+  '/login/AdvisorSignup': typeof LoginAdvisorSignupLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/AdvisorDashboard': typeof AdvisorDashboardRoute
   '/CheckInPage': typeof CheckInPageRoute
-  '/GeoLocationTest': typeof GeoLocationTestRoute
   '/Admin': typeof AdminLazyRoute
+  '/AdvisorDashboard': typeof AdvisorDashboardLazyRoute
+  '/GeoLocationTest': typeof GeoLocationTestLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
   '/login/AdminLogin': typeof LoginAdminLoginRoute
-  '/login/AdvisorLogin': typeof LoginAdvisorLoginRoute
-  '/login/AdvisorSignup': typeof LoginAdvisorSignupRoute
   '/login/Default': typeof LoginDefaultRoute
+  '/login/AdvisorLogin': typeof LoginAdvisorLoginLazyRoute
+  '/login/AdvisorSignup': typeof LoginAdvisorSignupLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/AdvisorDashboard': typeof AdvisorDashboardRoute
   '/CheckInPage': typeof CheckInPageRoute
-  '/GeoLocationTest': typeof GeoLocationTestRoute
   '/Admin': typeof AdminLazyRoute
+  '/AdvisorDashboard': typeof AdvisorDashboardLazyRoute
+  '/GeoLocationTest': typeof GeoLocationTestLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
   '/login/AdminLogin': typeof LoginAdminLoginRoute
-  '/login/AdvisorLogin': typeof LoginAdvisorLoginRoute
-  '/login/AdvisorSignup': typeof LoginAdvisorSignupRoute
   '/login/Default': typeof LoginDefaultRoute
+  '/login/AdvisorLogin': typeof LoginAdvisorLoginLazyRoute
+  '/login/AdvisorSignup': typeof LoginAdvisorSignupLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/AdvisorDashboard'
     | '/CheckInPage'
-    | '/GeoLocationTest'
     | '/Admin'
+    | '/AdvisorDashboard'
+    | '/GeoLocationTest'
     | '/KioskPage'
     | '/Welcome'
     | '/login/AdminLogin'
+    | '/login/Default'
     | '/login/AdvisorLogin'
     | '/login/AdvisorSignup'
-    | '/login/Default'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/AdvisorDashboard'
     | '/CheckInPage'
-    | '/GeoLocationTest'
     | '/Admin'
+    | '/AdvisorDashboard'
+    | '/GeoLocationTest'
     | '/KioskPage'
     | '/Welcome'
     | '/login/AdminLogin'
+    | '/login/Default'
     | '/login/AdvisorLogin'
     | '/login/AdvisorSignup'
-    | '/login/Default'
   id:
     | '__root__'
     | '/'
-    | '/AdvisorDashboard'
     | '/CheckInPage'
-    | '/GeoLocationTest'
     | '/Admin'
+    | '/AdvisorDashboard'
+    | '/GeoLocationTest'
     | '/KioskPage'
     | '/Welcome'
     | '/login/AdminLogin'
+    | '/login/Default'
     | '/login/AdvisorLogin'
     | '/login/AdvisorSignup'
-    | '/login/Default'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdvisorDashboardRoute: typeof AdvisorDashboardRoute
   CheckInPageRoute: typeof CheckInPageRoute
-  GeoLocationTestRoute: typeof GeoLocationTestRoute
   AdminLazyRoute: typeof AdminLazyRoute
+  AdvisorDashboardLazyRoute: typeof AdvisorDashboardLazyRoute
+  GeoLocationTestLazyRoute: typeof GeoLocationTestLazyRoute
   KioskPageLazyRoute: typeof KioskPageLazyRoute
   WelcomeLazyRoute: typeof WelcomeLazyRoute
   LoginAdminLoginRoute: typeof LoginAdminLoginRoute
-  LoginAdvisorLoginRoute: typeof LoginAdvisorLoginRoute
-  LoginAdvisorSignupRoute: typeof LoginAdvisorSignupRoute
   LoginDefaultRoute: typeof LoginDefaultRoute
+  LoginAdvisorLoginLazyRoute: typeof LoginAdvisorLoginLazyRoute
+  LoginAdvisorSignupLazyRoute: typeof LoginAdvisorSignupLazyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,18 +204,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KioskPageLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/GeoLocationTest': {
+      id: '/GeoLocationTest'
+      path: '/GeoLocationTest'
+      fullPath: '/GeoLocationTest'
+      preLoaderRoute: typeof GeoLocationTestLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/AdvisorDashboard': {
+      id: '/AdvisorDashboard'
+      path: '/AdvisorDashboard'
+      fullPath: '/AdvisorDashboard'
+      preLoaderRoute: typeof AdvisorDashboardLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/Admin': {
       id: '/Admin'
       path: '/Admin'
       fullPath: '/Admin'
       preLoaderRoute: typeof AdminLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/GeoLocationTest': {
-      id: '/GeoLocationTest'
-      path: '/GeoLocationTest'
-      fullPath: '/GeoLocationTest'
-      preLoaderRoute: typeof GeoLocationTestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/CheckInPage': {
@@ -213,13 +232,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckInPageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/AdvisorDashboard': {
-      id: '/AdvisorDashboard'
-      path: '/AdvisorDashboard'
-      fullPath: '/AdvisorDashboard'
-      preLoaderRoute: typeof AdvisorDashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -227,25 +239,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login/Default': {
-      id: '/login/Default'
-      path: '/login/Default'
-      fullPath: '/login/Default'
-      preLoaderRoute: typeof LoginDefaultRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login/AdvisorSignup': {
       id: '/login/AdvisorSignup'
       path: '/login/AdvisorSignup'
       fullPath: '/login/AdvisorSignup'
-      preLoaderRoute: typeof LoginAdvisorSignupRouteImport
+      preLoaderRoute: typeof LoginAdvisorSignupLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login/AdvisorLogin': {
       id: '/login/AdvisorLogin'
       path: '/login/AdvisorLogin'
       fullPath: '/login/AdvisorLogin'
-      preLoaderRoute: typeof LoginAdvisorLoginRouteImport
+      preLoaderRoute: typeof LoginAdvisorLoginLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/Default': {
+      id: '/login/Default'
+      path: '/login/Default'
+      fullPath: '/login/Default'
+      preLoaderRoute: typeof LoginDefaultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login/AdminLogin': {
@@ -260,16 +272,16 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdvisorDashboardRoute: AdvisorDashboardRoute,
   CheckInPageRoute: CheckInPageRoute,
-  GeoLocationTestRoute: GeoLocationTestRoute,
   AdminLazyRoute: AdminLazyRoute,
+  AdvisorDashboardLazyRoute: AdvisorDashboardLazyRoute,
+  GeoLocationTestLazyRoute: GeoLocationTestLazyRoute,
   KioskPageLazyRoute: KioskPageLazyRoute,
   WelcomeLazyRoute: WelcomeLazyRoute,
   LoginAdminLoginRoute: LoginAdminLoginRoute,
-  LoginAdvisorLoginRoute: LoginAdvisorLoginRoute,
-  LoginAdvisorSignupRoute: LoginAdvisorSignupRoute,
   LoginDefaultRoute: LoginDefaultRoute,
+  LoginAdvisorLoginLazyRoute: LoginAdvisorLoginLazyRoute,
+  LoginAdvisorSignupLazyRoute: LoginAdvisorSignupLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

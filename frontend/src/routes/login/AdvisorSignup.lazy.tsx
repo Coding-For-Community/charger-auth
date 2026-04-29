@@ -1,10 +1,10 @@
 import { Button, Card, Group, Stack, TextInput, Title, rem } from "@mantine/core";
 import { useMutation } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate, createLazyFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { fetchBackend } from "../../api/fetchBackend";
 
-export const Route = createFileRoute('/login/AdvisorSignup')({
+export const Route = createLazyFileRoute('/login/AdvisorSignup')({
   component: AdvisorSignup,
 });
 
