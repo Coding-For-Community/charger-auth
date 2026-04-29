@@ -2,6 +2,10 @@
 Stores the main free period check-in endpoints.
 """
 
+from cryptography.utils import Enum
+from checkin.core.consts import TEACHER_MONITORED_KIOSK, AdvisorRequest
+from checkin.core.consts import KIOSK
+from checkin.schema import AdvisorLoginSchema, SingleStudentEmail
 import asyncio
 import logging
 import random
@@ -11,7 +15,8 @@ from datetime import datetime, timezone, timedelta
 import ninja
 
 from asgiref.sync import sync_to_async
-from django.contrib.auth import aauthenticate, alogin
+from django.contrib.auth import aauthenticate, alogin, alogout
+from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.db.models import Prefetch
 from django.http import HttpRequest, FileResponse, HttpResponse
@@ -22,7 +27,8 @@ from checkin.core.api_methods import (
     get_next_free_block,
     parse_email,
     get_check_in_record,
-    get_perms,
+    is_kiosk,
+    is_teacher_monitored_kiosk,
     fmt_eastern_date,
 )
 from checkin.core.compress_video import compress_video
@@ -31,7 +37,7 @@ from checkin.core.errors import (
     InvalidFreeBlock,
     DeviceIdConflict,
     NoVideoFound,
-    Http400,
+    Http400, AdvisorNotFound, AdviseeNotFound, AdviseeAlreadyHasAdvisor,
 )
 from checkin.core.get_now import get_now
 from checkin.core.random_token_manager import RandomTokenManager
@@ -39,13 +45,13 @@ from checkin.models import (
     Student,
     FreePeriodCheckIn,
     SeniorPrivilegeCheckIn,
-    SeniorPrivilegesBan,
+    SeniorPrivilegesBan, Advisor,
 )
 from checkin.schema import (
     CheckInSchema,
     AdminLoginSchema,
     ManualCheckInSchema,
-    TentativeCheckInSchema,
+    TentativeCheckInSchema, AdvisorRegisterSchema,
 )
 from config import settings
 
@@ -59,10 +65,8 @@ logger = logging.getLogger(__name__)
 
 @router.get("/kioskToken/")
 async def token_for_kiosk(request: HttpRequest):
-    perms, curr_free_block = await asyncio.gather(
-        get_perms(request), get_curr_free_block()
-    )
-    if not perms.get("isAdmin"):
+    authenticated, curr_free_block = await asyncio.gather(is_kiosk(request), get_curr_free_block())
+    if not authenticated:
         return HttpResponse(status=403)
     token = kiosk_token_manager.get()
     token["curr_free_block"] = curr_free_block
@@ -92,9 +96,15 @@ def senior_year(request):
     else:
         return now.year + 1
 
+@router.get("/students/")
+async def fetch_students(request):
+    return [
+        {"name": student.name, "email": student.email}
+        async for student in Student.objects.all()
+    ]
 
 @router.get("/students/{free_block}/")
-async def fetch_students(request, free_block: FreeBlock):
+async def fetch_students_by_free_period(request, free_block: FreeBlock):
     if free_block not in ALL_FREE_BLOCKS:
         return InvalidFreeBlock()
     output = []
@@ -169,11 +179,6 @@ async def student_exists(request, email_or_id: str):
     }
 
 
-@router.get("/perms/")
-async def perms_endpoint(request):
-    return await get_perms(request)
-
-
 @router.post("/run/")
 async def check_in_student(request, data: CheckInSchema):
     if data.user_token not in user_tokens:
@@ -213,7 +218,7 @@ async def check_in_student_tentative(
 
 @router.post("/runManual/")
 async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchema):
-    if not (await get_perms(request)).get("teacherMonitored"):
+    if not await is_teacher_monitored_kiosk(request):
         return HttpResponse(status=403)
     email = await parse_email(data.email_or_id)
     record = await get_check_in_record(email, data.mode, uuid.uuid4().hex)
@@ -226,18 +231,24 @@ async def check_in_student_manual(request: HttpRequest, data: ManualCheckInSchem
     return {"successMsg": record.msg}
 
 
-@router.post("/adminLogin/")
-async def admin_login(request: HttpRequest, data: AdminLoginSchema):
-    res = await aauthenticate(request, username="Kiosk", password=data.password)
-    if res is None or not res.is_superuser:
-        res = await aauthenticate(
-            request, username="TeacherMonitoredKiosk", password=data.password
-        )
-    if res is None or not res.is_superuser:
+@router.post("/login/")
+async def login(request: HttpRequest, data: AdminLoginSchema | AdvisorLoginSchema):
+    if data.kind == "admin":
+        res = await aauthenticate(request, username=KIOSK, password=data.password)
+        if res is None or not res.is_superuser:
+            res = await aauthenticate(request, username=TEACHER_MONITORED_KIOSK, password=data.password)
+    else:
+        res = await aauthenticate(request, username=data.email, password=data.password)
+    if res is None:
         return {"success": False}
     await alogin(request, user=res)
-    logger.info("Admin login success.")
+    logger.info("Login success.")
     return {"success": True}
+
+
+@router.post("/logout/")
+async def logout(request: HttpRequest):
+    await alogout(request)
 
 
 @router.get("/allSeniors/")
@@ -259,7 +270,7 @@ async def fetch_all_seniors(request):
 
 @router.post("/enableSp/")
 async def enable_senior_privileges(request, is_for: str = EVERYONE_KW):
-    if not (await get_perms(request)).get("isAdmin"):
+    if not await is_kiosk(request):
         return HttpResponse(status=403)
     if is_for == EVERYONE_KW:
         await SeniorPrivilegesBan.objects.all().adelete()
@@ -275,7 +286,7 @@ async def enable_senior_privileges(request, is_for: str = EVERYONE_KW):
 
 @router.post("/disableSp/")
 async def disable_senior_privileges(request, is_for: str = EVERYONE_KW):
-    if not (await get_perms(request)).get("isAdmin"):
+    if not await is_kiosk(request):
         return HttpResponse(status=403)
     if is_for == EVERYONE_KW:
         await SeniorPrivilegesBan.objects.all().adelete()
@@ -283,7 +294,118 @@ async def disable_senior_privileges(request, is_for: str = EVERYONE_KW):
     return {"success": True}
 
 
+@router.post("/registerAdvisor/")
+async def register_advisor(request, data: AdvisorRegisterSchema):
+    email = data.email.lower()
+    if await User.objects.filter(username=email).afirst():
+        return HttpResponse("Username already taken", status=400)
+    user = await sync_to_async(lambda: User.objects.create_user(username=email, email=email, password=data.password))()
+    await Advisor(name=data.name, user=user).asave()
+    return {"success": True}
+
+
+@router.post("/removeAdvisee/")
+async def remove_advisee(request, student_email: str):
+    student = await Student.objects.filter(email=student_email).afirst()
+    if student is None:
+        return HttpResponse("Advisee not found", status=400)
+    student.advisor = None
+    student.advisor_req = AdvisorRequest.NONE
+    await student.asave()
+    return {"success": True}
+
+
+@router.post("/inviteAdvisee/")
+async def send_advisee_invite(request: HttpRequest, student_email: str):
+    user = await request.auser()
+    if user.is_superuser or not user.is_authenticated:
+        return HttpResponse("You must be logged in as an advisor to send an invite", status=403)
+    advisor = await Advisor.objects.filter(user=user).afirst()
+    student = await Student.objects.filter(email=student_email).afirst()
+    preexistent_advisor = await student.aadvisor()
+    if student is None:
+        return AdviseeNotFound()
+    elif advisor is None:
+        return AdvisorNotFound()
+    elif preexistent_advisor is not None:
+        return AdviseeAlreadyHasAdvisor(preexistent_advisor.name)
+    student.advisor = advisor
+    student.advisor_req = AdvisorRequest.PENDING
+    await student.asave()
+    return {"success": True}
+
+
+@router.post("/advisorInvite/accept/")
+async def accept_advisor_invite(request, student_email: str):
+    student = await Student.objects.filter(email=student_email).afirst()
+    if student is None:
+        return AdviseeNotFound()
+    student.advisor_req = AdvisorRequest.ACCEPTED
+    await student.asave()
+    return {"success": True}
+
+
+@router.post("/advisorInvite/decline/")
+async def decline_advisor_invite(request, student_email: str):
+    student = await Student.objects.filter(email=student_email).afirst()
+    if student is None:
+        return AdviseeNotFound()
+    student.advisor = None
+    student.advisor_req = AdvisorRequest.NONE
+    await student.asave()
+    return {"success": True}
+
+
+@router.get("/advisorInvite/")
+async def get_advisor_invite(request, student_email: str):
+    student = await Student.objects.filter(email=student_email).afirst()
+    if student is None:
+        return HttpResponse("Advisee not found", status=400)
+    advisor = await student.aadvisor()
+    if student.advisor_req != AdvisorRequest.NONE and advisor:
+        advisor_user = await advisor.auser()
+        return {
+            "request": student.get_advisor_req_display(),
+            "advisor_email": advisor_user.email,
+            "advisor_name": advisor.name
+        }
+    return {"request": "not_requested"}
+
+
+@router.get("/advisees/")
+async def get_advisees(request):
+    user = await request.auser()
+    if user.is_superuser or not user.is_authenticated:
+        return HttpResponse("You must be logged in as an advisor to send an invite", status=403)
+    advisor = await Advisor.objects.filter(user=user).afirst()
+    advisee_data = []
+    async for student in advisor.student_set.all():
+        checked_in = (await student.townhallcheckin_set.afirst()) is not None
+        if student.advisor_req == AdvisorRequest.NONE:
+            continue
+        advisee_data.append({
+            "name": student.name,
+            "email": student.email,
+            "checkedIn": checked_in,
+            "status": student.get_advisor_req_display()
+        })
+    return advisee_data
+
+
+@router.get("/advisors/")
+async def all_advisors(request):
+    advisors = Advisor.objects.all().order_by("name")
+    return [
+        { "name": advisor.name, "email": (await advisor.auser()).email }
+        async for advisor in advisors
+    ]
+
 if settings.DEBUG:
+    @router.get("/apiForward/{path:route}")
+    async def api_forward(request, route: str):
+        print(route)
+        return route
+
 
     @router.get("/test/addLotsOfStudents/")
     async def add_lots_of_students(request):
@@ -330,3 +452,10 @@ if settings.DEBUG:
     async def erase_sp_check_ins(request):
         await SeniorPrivilegeCheckIn.objects.all().adelete()
         return "Yeah i just did a thing"
+
+    @router.get("/test/addAdvisors/")
+    async def add_lots_of_advisors(request):
+        for i in range(20):
+            user = await User.objects.acreate_user(f"advisor{i}@caryacademy.org", f"advisor{i}@caryacademy.org", "password")
+            await Advisor.objects.acreate(name=f"Advisor {i}", user=user)
+        return "Hi"

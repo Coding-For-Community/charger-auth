@@ -12,7 +12,7 @@ from checkin.core.errors import Http400
 logger = logging.getLogger(__name__)
 
 try:
-    api = NinjaAPI()
+    api = NinjaAPI(version="1.0.0", urls_namespace="main_api")
 
     api.add_router("/oauth", oauth.api.router)
     if "manage.py" not in sys.argv:
@@ -27,6 +27,14 @@ try:
         logger.info("Home Visit")
         print(datetime.now())
         return "Whassup"
+
+    @api.exception_handler(Exception)
+    def handle_uncaught_exception(request, exc):
+        logger.critical(
+            "Uncaught exception, application will shut down",
+            exc_info=exc,
+        )
+        return api.create_response(request, {"detail": "Internal Server Error"}, status=500)
 
     @api.exception_handler(Http400)
     def handle_user_error(request, exc: Http400):

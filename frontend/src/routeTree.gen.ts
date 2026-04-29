@@ -11,10 +11,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginPageRouteImport } from './routes/LoginPage'
+import { Route as GeoLocationTestRouteImport } from './routes/GeoLocationTest'
 import { Route as CheckInPageRouteImport } from './routes/CheckInPage'
-import { Route as AdminLoginRouteImport } from './routes/AdminLogin'
+import { Route as AdvisorDashboardRouteImport } from './routes/AdvisorDashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginDefaultRouteImport } from './routes/login/Default'
+import { Route as LoginAdvisorSignupRouteImport } from './routes/login/AdvisorSignup'
+import { Route as LoginAdvisorLoginRouteImport } from './routes/login/AdvisorLogin'
+import { Route as LoginAdminLoginRouteImport } from './routes/login/AdminLogin'
 
 const WelcomeLazyRouteImport = createFileRoute('/Welcome')()
 const KioskPageLazyRouteImport = createFileRoute('/KioskPage')()
@@ -35,9 +39,9 @@ const AdminLazyRoute = AdminLazyRouteImport.update({
   path: '/Admin',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/Admin.lazy').then((d) => d.Route))
-const LoginPageRoute = LoginPageRouteImport.update({
-  id: '/LoginPage',
-  path: '/LoginPage',
+const GeoLocationTestRoute = GeoLocationTestRouteImport.update({
+  id: '/GeoLocationTest',
+  path: '/GeoLocationTest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckInPageRoute = CheckInPageRouteImport.update({
@@ -45,9 +49,9 @@ const CheckInPageRoute = CheckInPageRouteImport.update({
   path: '/CheckInPage',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: '/AdminLogin',
-  path: '/AdminLogin',
+const AdvisorDashboardRoute = AdvisorDashboardRouteImport.update({
+  id: '/AdvisorDashboard',
+  path: '/AdvisorDashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -55,73 +59,121 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginDefaultRoute = LoginDefaultRouteImport.update({
+  id: '/login/Default',
+  path: '/login/Default',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginAdvisorSignupRoute = LoginAdvisorSignupRouteImport.update({
+  id: '/login/AdvisorSignup',
+  path: '/login/AdvisorSignup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginAdvisorLoginRoute = LoginAdvisorLoginRouteImport.update({
+  id: '/login/AdvisorLogin',
+  path: '/login/AdvisorLogin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginAdminLoginRoute = LoginAdminLoginRouteImport.update({
+  id: '/login/AdminLogin',
+  path: '/login/AdminLogin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/AdminLogin': typeof AdminLoginRoute
+  '/AdvisorDashboard': typeof AdvisorDashboardRoute
   '/CheckInPage': typeof CheckInPageRoute
-  '/LoginPage': typeof LoginPageRoute
+  '/GeoLocationTest': typeof GeoLocationTestRoute
   '/Admin': typeof AdminLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
+  '/login/AdminLogin': typeof LoginAdminLoginRoute
+  '/login/AdvisorLogin': typeof LoginAdvisorLoginRoute
+  '/login/AdvisorSignup': typeof LoginAdvisorSignupRoute
+  '/login/Default': typeof LoginDefaultRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/AdminLogin': typeof AdminLoginRoute
+  '/AdvisorDashboard': typeof AdvisorDashboardRoute
   '/CheckInPage': typeof CheckInPageRoute
-  '/LoginPage': typeof LoginPageRoute
+  '/GeoLocationTest': typeof GeoLocationTestRoute
   '/Admin': typeof AdminLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
+  '/login/AdminLogin': typeof LoginAdminLoginRoute
+  '/login/AdvisorLogin': typeof LoginAdvisorLoginRoute
+  '/login/AdvisorSignup': typeof LoginAdvisorSignupRoute
+  '/login/Default': typeof LoginDefaultRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/AdminLogin': typeof AdminLoginRoute
+  '/AdvisorDashboard': typeof AdvisorDashboardRoute
   '/CheckInPage': typeof CheckInPageRoute
-  '/LoginPage': typeof LoginPageRoute
+  '/GeoLocationTest': typeof GeoLocationTestRoute
   '/Admin': typeof AdminLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
+  '/login/AdminLogin': typeof LoginAdminLoginRoute
+  '/login/AdvisorLogin': typeof LoginAdvisorLoginRoute
+  '/login/AdvisorSignup': typeof LoginAdvisorSignupRoute
+  '/login/Default': typeof LoginDefaultRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/AdminLogin'
+    | '/AdvisorDashboard'
     | '/CheckInPage'
-    | '/LoginPage'
+    | '/GeoLocationTest'
     | '/Admin'
     | '/KioskPage'
     | '/Welcome'
+    | '/login/AdminLogin'
+    | '/login/AdvisorLogin'
+    | '/login/AdvisorSignup'
+    | '/login/Default'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/AdminLogin'
+    | '/AdvisorDashboard'
     | '/CheckInPage'
-    | '/LoginPage'
+    | '/GeoLocationTest'
     | '/Admin'
     | '/KioskPage'
     | '/Welcome'
+    | '/login/AdminLogin'
+    | '/login/AdvisorLogin'
+    | '/login/AdvisorSignup'
+    | '/login/Default'
   id:
     | '__root__'
     | '/'
-    | '/AdminLogin'
+    | '/AdvisorDashboard'
     | '/CheckInPage'
-    | '/LoginPage'
+    | '/GeoLocationTest'
     | '/Admin'
     | '/KioskPage'
     | '/Welcome'
+    | '/login/AdminLogin'
+    | '/login/AdvisorLogin'
+    | '/login/AdvisorSignup'
+    | '/login/Default'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminLoginRoute: typeof AdminLoginRoute
+  AdvisorDashboardRoute: typeof AdvisorDashboardRoute
   CheckInPageRoute: typeof CheckInPageRoute
-  LoginPageRoute: typeof LoginPageRoute
+  GeoLocationTestRoute: typeof GeoLocationTestRoute
   AdminLazyRoute: typeof AdminLazyRoute
   KioskPageLazyRoute: typeof KioskPageLazyRoute
   WelcomeLazyRoute: typeof WelcomeLazyRoute
+  LoginAdminLoginRoute: typeof LoginAdminLoginRoute
+  LoginAdvisorLoginRoute: typeof LoginAdvisorLoginRoute
+  LoginAdvisorSignupRoute: typeof LoginAdvisorSignupRoute
+  LoginDefaultRoute: typeof LoginDefaultRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -147,11 +199,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/LoginPage': {
-      id: '/LoginPage'
-      path: '/LoginPage'
-      fullPath: '/LoginPage'
-      preLoaderRoute: typeof LoginPageRouteImport
+    '/GeoLocationTest': {
+      id: '/GeoLocationTest'
+      path: '/GeoLocationTest'
+      fullPath: '/GeoLocationTest'
+      preLoaderRoute: typeof GeoLocationTestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/CheckInPage': {
@@ -161,11 +213,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckInPageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/AdminLogin': {
-      id: '/AdminLogin'
-      path: '/AdminLogin'
-      fullPath: '/AdminLogin'
-      preLoaderRoute: typeof AdminLoginRouteImport
+    '/AdvisorDashboard': {
+      id: '/AdvisorDashboard'
+      path: '/AdvisorDashboard'
+      fullPath: '/AdvisorDashboard'
+      preLoaderRoute: typeof AdvisorDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -175,17 +227,49 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login/Default': {
+      id: '/login/Default'
+      path: '/login/Default'
+      fullPath: '/login/Default'
+      preLoaderRoute: typeof LoginDefaultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/AdvisorSignup': {
+      id: '/login/AdvisorSignup'
+      path: '/login/AdvisorSignup'
+      fullPath: '/login/AdvisorSignup'
+      preLoaderRoute: typeof LoginAdvisorSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/AdvisorLogin': {
+      id: '/login/AdvisorLogin'
+      path: '/login/AdvisorLogin'
+      fullPath: '/login/AdvisorLogin'
+      preLoaderRoute: typeof LoginAdvisorLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/AdminLogin': {
+      id: '/login/AdminLogin'
+      path: '/login/AdminLogin'
+      fullPath: '/login/AdminLogin'
+      preLoaderRoute: typeof LoginAdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminLoginRoute: AdminLoginRoute,
+  AdvisorDashboardRoute: AdvisorDashboardRoute,
   CheckInPageRoute: CheckInPageRoute,
-  LoginPageRoute: LoginPageRoute,
+  GeoLocationTestRoute: GeoLocationTestRoute,
   AdminLazyRoute: AdminLazyRoute,
   KioskPageLazyRoute: KioskPageLazyRoute,
   WelcomeLazyRoute: WelcomeLazyRoute,
+  LoginAdminLoginRoute: LoginAdminLoginRoute,
+  LoginAdvisorLoginRoute: LoginAdvisorLoginRoute,
+  LoginAdvisorSignupRoute: LoginAdvisorSignupRoute,
+  LoginDefaultRoute: LoginDefaultRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

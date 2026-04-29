@@ -1,3 +1,4 @@
+from checkin.core.consts import TEACHER_MONITORED_KIOSK, KIOSK
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -138,14 +139,14 @@ async def get_emails_from_grad_year(grad_year: int):
     return [data.get("email") for data in res.json()["value"] if data.get("email")]
 
 
-async def get_perms(request: HttpRequest):
+async def is_teacher_monitored_kiosk(request: HttpRequest):
     user = await request.auser()
-    if not (user.is_authenticated and user.is_superuser):
-        return {"isAdmin": False}
-    return {
-        "isAdmin": True,
-        "teacherMonitored": user.username == "TeacherMonitoredKiosk",
-    }
+    return user.is_authenticated and user.is_superuser and user.username == TEACHER_MONITORED_KIOSK
+
+
+async def is_kiosk(request: HttpRequest):
+    user = await request.auser()
+    return user.is_authenticated and user.is_superuser and user.username == KIOSK
 
 
 def fmt_eastern_date(text: str | None):

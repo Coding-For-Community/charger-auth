@@ -81,3 +81,18 @@ class NoSeniorPrivileges(Http400):
             "You don't have senior privileges."
             " If you're a senior, you probably forgot to do the form.",
         )
+
+
+class AdvisorNotFound(Http400):
+    def __init__(self):
+        super().__init__(11, "Advisor not found.")
+
+
+class AdviseeNotFound(Http400):
+    def __init__(self):
+        super().__init__(12, "Advisee not found.")
+
+
+class AdviseeAlreadyHasAdvisor(Http400):
+    def __init__(self, advisor_name: str):
+        super().__init__(13, "This advisee already has an advisor (" + advisor_name + ").")

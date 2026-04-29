@@ -1,14 +1,29 @@
+from ninja.errors import HttpError
+from django.http import HttpResponse
+
+from checkin.core.consts import AdvisorRequest
 import os
 
 from asgiref.sync import sync_to_async
 from bitfield import BitField
-from checkin.core.consts import (ALL_FREE_BLOCKS, EVERYONE_KW, US_EASTERN,
-                                 FreeBlock)
+from django.contrib.auth.models import User
+ 
+from checkin.core.consts import (ALL_FREE_BLOCKS, EVERYONE_KW, US_EASTERN, FreeBlock)
 from django.core.validators import EmailValidator, RegexValidator
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-from solo.models import SingletonModel
+
+
+class Advisor(models.Model):
+    """
+    A cary academy advisor.
+    """
+    name = models.CharField(max_length=30)
+    user = models.OneToOneField(User, primary_key=True, on_delete=models.CASCADE)
+
+    async def auser(self):
+        return await sync_to_async(lambda: self.user)()
 
 
 class Student(models.Model):
@@ -20,19 +35,18 @@ class Student(models.Model):
     free_blocks = BitField(flags=ALL_FREE_BLOCKS, default=0)
     name = models.CharField(max_length=30, default="[Unknown]")
     is_senior = models.BooleanField(default=False)
+    advisor = models.ForeignKey(Advisor, on_delete=models.SET_NULL, null=True, blank=True)
+    advisor_req = models.PositiveIntegerField(
+        choices=AdvisorRequest.choices,
+        default=AdvisorRequest.NONE
+    )
 
     @classmethod
     def as_bit_str(cls, free_block: FreeBlock) -> int:
         return getattr(cls.free_blocks, free_block)
 
-
-class Advisor(models.Model):
-    """
-    A cary academy advisor
-    """
-
-    email = models.EmailField(max_length=45, primary_key=True)
-    name = models.CharField(max_length=30, default="[Unknown]")
+    async def aadvisor(self):
+        return await sync_to_async(lambda: self.advisor)()
 
 
 class FreePeriodCheckIn(models.Model):
@@ -47,7 +61,7 @@ class FreePeriodCheckIn(models.Model):
         choices=[(i, ALL_FREE_BLOCKS[i]) for i in range(len(ALL_FREE_BLOCKS))]
     )  # Use PositiveSmallIntegerField for faster write speeds
     device_id = models.CharField(max_length=32)
-    video = models.FileField(upload_to="checkin_vids/", blank=True)
+    video = models.FileField(upload_to="checkin_vids/free_periods/", blank=True)
 
     async def astudent(self):
         return await sync_to_async(lambda: self.student)()
@@ -83,7 +97,7 @@ class SeniorPrivilegeCheckIn(models.Model):
     checked_out = models.BooleanField()
     check_out_date = models.DateTimeField()
     check_in_date = models.DateTimeField(null=True)
-    video = models.FileField(upload_to="checkin_vids/", blank=True)
+    video = models.FileField(upload_to="checkin_vids/senior_privileges/", blank=True)
 
     def name(self):
         return "sp_check_out" if self.checked_out else "sp_check_in"
@@ -110,7 +124,7 @@ class SeniorPrivilegeCheckIn(models.Model):
 class TownHallCheckIn(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE)
     device_id = models.CharField(max_length=32)
-    video = models.FileField(upload_to="checkin_vids/", blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
 
 class TownHallMeetingToday(models.Model):
