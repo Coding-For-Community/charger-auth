@@ -146,7 +146,7 @@ async def is_teacher_monitored_kiosk(request: HttpRequest):
 
 async def is_kiosk(request: HttpRequest):
     user = await request.auser()
-    return user.is_authenticated and user.is_superuser and user.username == KIOSK
+    return user.is_authenticated and user.is_superuser and user.username in [KIOSK, TEACHER_MONITORED_KIOSK, "admin"]
 
 
 def fmt_eastern_date(text: str | None):

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 from ninja import Schema
 from checkin.core.consts import FreeBlock, CheckInOption
@@ -59,5 +60,18 @@ class SingleAdvisorEmail(Schema):
 class TownHallCheckInSchema(Schema):
     student_email: str
     device_id: str
+    longitude: float
+    latitude: float
+
+
+class CreateTownHallMeetingSchema(Schema):
+    start: datetime
+    end: datetime
+    title: str
+
+
+class TownHallSignInSchema(Schema):
+    student_email: str
+    code: str
     longitude: float
     latitude: float

@@ -6,7 +6,7 @@ from checkin.models import (
     FreeBlockToday,
     FreePeriodCheckIn,
     SeniorPrivilegeCheckIn,
-    SeniorPrivilegesBan,
+    SeniorPrivilegesBan, TownHallMeeting, TownHallCheckIn,
 )
 
 
@@ -20,7 +20,7 @@ class StudentsAdmin(admin.ModelAdmin):
 
 # Register your models here.
 admin.site.register(Student, StudentsAdmin)
-admin.site.register(FreeBlockToday)
-admin.site.register(FreePeriodCheckIn)
-admin.site.register(SeniorPrivilegesBan)
-admin.site.register(SeniorPrivilegeCheckIn)
+admin.site.register([
+    FreeBlockToday, FreePeriodCheckIn, SeniorPrivilegeCheckIn,
+    SeniorPrivilegesBan, TownHallMeeting, TownHallCheckIn
+])

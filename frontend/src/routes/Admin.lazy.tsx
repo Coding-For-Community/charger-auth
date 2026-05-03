@@ -17,89 +17,147 @@ import {
   Text,
   TextInput,
   Title,
+  type MantineSize,
 } from "@mantine/core";
-import { DateTimePicker } from "@mantine/dates";
-import { useQuery } from "@tanstack/react-query";
+import { DatePickerInput, DateTimePicker, TimePicker } from "@mantine/dates";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import z from "zod";
+import { useCheckedStudents } from "../api/checkedStudents.ts";
 import { fetchBackend } from "../api/fetchBackend.ts";
 import { useAdminLoginRedirect } from "../api/perms.ts";
 import { EvidencePlayer } from "../components/EvidencePlayer.tsx";
-import { IconReload, IconSettings2 } from "../components/icons.tsx";
+import { IconReload } from "../components/icons.tsx";
 import { ManageSeniorPrivileges } from "../components/ManageSeniorPrivileges.tsx";
+import { usePartialState } from "../utils/usePartialState.ts";
+import { IconEye, IconEyeOff } from "../components/icons.tsx";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export const Route = createLazyFileRoute("/Admin")({
   component: Admin,
 });
 
-const SP_MODE = "Senior Privileges";
+type Mode = "free_period" | "senior_privileges" | "town_hall"
+type Student = z.infer<typeof StudentSchema>
+
+const StudentSchema = z.object({
+  name: z.string(),
+  email: z.email(),
+  status: z.string(),
+  date_str: z.optional(z.string())
+});
+const TownHallMeetingSchema = z.object({
+  start: z.string(), // ISO string
+  end: z.string(),   // ISO string
+  code: z.string(),
+  title: z.string(),
+});
+const StudentsSchema = StudentSchema.array();
+const TownHallMeetingsSchema = TownHallMeetingSchema.array();
+
 const DATE_PROPS = {
   valueFormat: "DD MMM YY hh:mm A",
   styles: {
     input: { width: 94, height: 40, textAlign: "center" as CanvasTextAlign },
   },
+  size: "xs" as MantineSize
 };
+const INITIAL_STATE = {
+  mode: "free_period" as Mode,
+  spManagerOpened: false,
+  vidsOpened: false,
+  freePeriod: "A",
+  searchQ: "",
+  spStartDate: null as string | null,
+  spEndDate: null as string | null,
+  townHallDate: null as string | null,
+  townHallStartTime: "",
+  townHallEndTime: "",
+  townHallMeetTitle: "",
+  showCodes: {} as { [code: string]: boolean }
+}; 
+
+function townHallFieldsMissing(state: typeof INITIAL_STATE) {
+  return !state.townHallDate 
+    || !state.townHallStartTime 
+    || !state.townHallEndTime 
+    || !state.townHallMeetTitle.trim();
+}
 
 function Admin() {
   const loggedIn = useAdminLoginRedirect();
-  const [spManagerOpened, setSpManagerOpened] = useState(false);
-  const [vidsOpened, setVidsOpened] = useState(false);
-  const [navbarCollapsedMobile, setNavbarCollapsedMobile] = useState(true);
-  const [mode, setMode] = useState(SP_MODE);
-  const [fromDate, setFromDate] = useState<string | null>(null);
-  const [toDate, setToDate] = useState<string | null>(null);
-  const [searchQ, setSearchQ] = useState("");
-  const [checkedItems, setCheckedItems] = useState(() => {
-    try {
-      const txt = window.localStorage.getItem("checkedItems");
-      return (txt == null ? [] : JSON.parse(txt)) as string[];
-    } catch (e) {
-      console.error(e)
-      return []
-    }
-  });
-
+  const [state, updateState] = usePartialState(INITIAL_STATE);
+  const { isChecked, setChecked, clearChecked } = useCheckedStudents();
   const studentsQ = useQuery({
-    queryKey: ["students", mode, fromDate, toDate],
+    queryKey: ["students", state.mode, state.freePeriod, state.spStartDate, state.spEndDate],
     queryFn: async () => {
-      const res =
-        mode === SP_MODE
-          ? await fetchBackend(
-              `/checkin/spStudents/?from_date=${fromDate}&to_date=${toDate}`,
-            )
-          : await fetchBackend(`/checkin/students/${mode}`);
-      return (await res.json()) as any[];
+      const endpoints: Record<Mode, string> = {
+        free_period: `/checkin/students/FP/${state.freePeriod}`,
+        senior_privileges: `/checkin/students/SP/?from_date=${state.spStartDate}&to_date=${state.spEndDate}`,
+        town_hall: `checkin/students/TH/`
+      };
+      const res = await fetchBackend(endpoints[state.mode]);
+      return StudentsSchema.parseAsync(await res.json());
     },
   });
-  const seniorYearQ = useQuery({
-    queryKey: ["seniorYear"],
-    queryFn: async () =>
-      await (await fetchBackend("/checkin/seniorYear/")).text(),
-    staleTime: Infinity,
+  const meetingsQ = useQuery({
+    queryKey: ["townHallMeetings", state.mode],
+    queryFn: async () => {
+      if (state.mode !== "town_hall") return [];
+      const res = await fetchBackend("/checkin/townHallMeeting/all", { credentials: "include" });
+      const data = await res.json();
+      return TownHallMeetingsSchema.parse(data);
+    },
+    enabled: state.mode === "town_hall",
   });
-
-  function checked(name: string) {
-    return checkedItems.includes(name);
-  }
-
-  function setChecked(checked: boolean, name: string) {
-    setCheckedItems((prevValue) => {
-      let newItems = prevValue;
-      if (checked) {
-        if (!newItems.includes(name)) newItems = newItems.concat(name);
-      } else {
-        newItems = newItems.filter((item) => item !== name);
+  const addMeetingM = useMutation({
+    mutationFn: async () => {
+      if (townHallFieldsMissing(state)) {
+        window.alert("Invalid State: town hall dates/times or title not specified.")
+        return
       }
-      window.localStorage.setItem("checkedItems", JSON.stringify(newItems));
-      return newItems;
-    });
-  }
+      const start = dayjs(`${state.townHallDate}T${state.townHallStartTime}`);
+      const end = dayjs(`${state.townHallDate}T${state.townHallEndTime}`);
+      if (!start.isValid() || !end.isValid()) {
+        window.alert("Invalid State: town hall start/end times invalid.")
+        return
+      }
+      const res = await fetchBackend("/checkin/townHallMeeting/create/", {
+        credentials: "include",
+        method: "POST",
+        body: JSON.stringify({ 
+          start: start.toISOString(), 
+          end: end.toISOString(), 
+          title: state.townHallMeetTitle.trim() 
+        })
+      });
+      if (res.status === 200) {
+        window.alert("Town Hall meeting successfully created!")
+        updateState({ 
+          townHallMeetTitle: "",
+          townHallDate: null,
+          townHallStartTime: "",
+          townHallEndTime: ""
+        });
+        meetingsQ.refetch()
+      } else if (res.status === 400) {
+        const resp = await res.json();
+        window.alert(resp.msg);
+      } else {
+        window.alert(`Error, status ${res.status}.`)
+      }
+    }
+  })
 
-  function searched(student: any) {
+  function searched(student: Student) {
     return (
-      searchQ === "" ||
-      student.name.toLowerCase().includes(searchQ.toLowerCase()) ||
-      (student.id && student.id.toLowerCase().includes(searchQ.toLowerCase()))
+      state.searchQ === "" ||
+      student.name.toLowerCase().includes(state.searchQ.toLowerCase())
     );
   }
 
@@ -110,10 +168,16 @@ function Admin() {
   }
 
   const defaultColProps = {
-    hasCheckbox: mode !== SP_MODE,
-    checked,
+    hasCheckbox: state.mode == "free_period",
+    isChecked,
     setChecked,
   };
+
+  const titles: Record<Mode, string> = {
+    free_period: `Students with ${state.freePeriod} Block Free`,
+    senior_privileges: "Students with Senior Privileges",
+    town_hall: "Students Attending Town Hall Today"
+  }
 
   if (loggedIn.isFetching) {
     return (
@@ -126,6 +190,130 @@ function Admin() {
     );
   }
 
+  let sidebarContent = <></>
+  switch (state.mode) {
+    case "free_period":
+      sidebarContent = (
+        <>
+          <Select
+            data={["A", "B", "C", "D", "E", "F", "G"]}
+            value={state.freePeriod}
+            onChange={(freePeriod) => {
+              if (freePeriod == null) return;
+              clearChecked();
+              updateState({ freePeriod });
+            }}
+            maw={rem(200)}
+            label="Free Period"
+            maxDropdownHeight={300}
+          />
+          <Stack gap={rem(10)} mt={rem(20)}>
+            <Button bg="yellow" onClick={() => updateState({ vidsOpened: true })}>
+              Open Tentative Videos
+            </Button>
+            <Button bg="red" onClick={forceReset}>
+              Force Reset
+            </Button>
+            <Button onClick={clearChecked}>
+              Clear Checked Students
+            </Button>
+          </Stack>
+        </>
+      );
+      break;
+    case "senior_privileges":
+      sidebarContent = (
+        <>
+          <Group mb={0}>
+            <Text my={0} fz={14} fw={500}>
+              Date & Time Search
+            </Text>
+            <CloseButton
+              size="sm"
+              my={0}
+              ml="auto"
+              mr={3}
+              onClick={() => updateState({
+                spStartDate: null,
+                spEndDate: null
+              })}
+            />
+          </Group>
+          <Group gap={2} mt={0}>
+            <DateTimePicker
+              value={state.spStartDate}
+              onChange={spStartDate => updateState({ spStartDate })}
+              placeholder="Start Date"
+              {...DATE_PROPS}
+            />
+            <Text my={0}>-</Text>
+            <DateTimePicker
+              value={state.spEndDate}
+              onChange={spEndDate => updateState({ spEndDate })}
+              placeholder="End Date"
+              {...DATE_PROPS}
+            />
+          </Group>
+          <Stack gap={rem(10)} mt={rem(20)}>
+            <Button onClick={() => updateState({ spManagerOpened: true })}>
+              Manage Senior Privileges
+            </Button>
+            <Button bg="red" onClick={forceReset}>
+              Force Reset
+            </Button>
+          </Stack>
+        </>
+      );
+      break;
+    case "town_hall":
+      sidebarContent = (
+        <>
+          <TextInput
+            label="Meeting Title"
+            value={state.townHallMeetTitle}
+            onChange={e => updateState({ townHallMeetTitle: e.currentTarget.value})}
+            placeholder="Enter meeting title"
+          />
+          <DatePickerInput
+            value={state.townHallDate ? new Date(state.townHallDate) : null}
+            onChange={date => {
+              const townHallDate = date ? dayjs(date).format("YYYY-MM-DD") : null
+              updateState({ townHallDate })
+            }}
+            placeholder="Select Date"
+            label="Town Hall Date"
+            mt={rem(10)}
+          />
+          <Group gap={rem(18)} mt={rem(10)}>
+            <TimePicker
+              value={state.townHallStartTime}
+              onChange={townHallStartTime => updateState({ townHallStartTime })}
+              label="Start Time"
+              format="12h"
+              {...DATE_PROPS}
+            />
+            <TimePicker
+              value={state.townHallEndTime}
+              onChange={townHallEndTime => updateState({ townHallEndTime })}
+              label="End Time"
+              format="12h"
+              {...DATE_PROPS}
+            />
+          </Group>
+          <Button
+            my={rem(16)}
+            color="blue"
+            fullWidth
+            disabled={townHallFieldsMissing(state)}
+            onClick={() => addMeetingM.mutate()}
+          >
+            Create Meeting
+          </Button>
+        </>
+      )
+      break;
+  }
+
   return (
     <AppShell
       padding="md"
@@ -133,7 +321,6 @@ function Admin() {
       navbar={{
         width: 240,
         breakpoint: "sm",
-        collapsed: { mobile: navbarCollapsedMobile },
       }}
       style={{ background: "#f6f8fa" }}
     >
@@ -151,14 +338,6 @@ function Admin() {
           <Title order={3} fw={700} c="blue">
             CA Check-in Admin
           </Title>
-          <ActionIcon
-            variant="transparent"
-            ml="auto"
-            hiddenFrom="sm"
-            onClick={() => setNavbarCollapsedMobile(!navbarCollapsedMobile)}
-          >
-            <IconSettings2 />
-          </ActionIcon>
         </Group>
       </AppShell.Header>
 
@@ -166,169 +345,230 @@ function Admin() {
         p="md"
         style={{ background: "#f8fafc", borderRight: "1px solid #e9ecef" }}
       >
-        <Title order={4} c="gray.7" mb={rem(4)}>
-          Options
-        </Title>
-        <Divider mb={rem(12)} />
         <Select
-          data={["A", "B", "C", "D", "E", "F", "G", SP_MODE]}
-          value={mode}
-          onChange={(block) => {
-            if (block == null) return;
-            setCheckedItems([]);
-            setMode(block);
-          }}
-          maw={rem(200)}
-          label="Free Period/SP"
-          maxDropdownHeight={300}
+          label="Mode"
+          data={[
+            { label: "Free Period", value: "free_period" },
+            { label: "Senior Privileges", value: "senior_privileges" },
+            { label: "Town Hall", value: "town_hall" }
+          ]}
+          value={state.mode}
+          onChange={newMode => updateState({ 
+            mode: (newMode ?? "free_period") as Mode 
+          })}
         />
-        {mode === SP_MODE && (
-          <>
-            <Group  mt={16} mb={0}>
-              <Text my={0} fz={14} fw={500}>
-                Date & Time Search
-              </Text>
-              <CloseButton
-                size="sm"
-                my={0}
-                ml="auto"
-                mr={3}
-                onClick={() => {
-                  setFromDate(null);
-                  setToDate(null);
-                }}
-              />
-            </Group>
-            <Group gap={2} mt={2}>
-              <DateTimePicker
-                value={fromDate}
-                onChange={setFromDate}
-                size="xs"
-                placeholder="Start Date"
-                {...DATE_PROPS}
-              />
-              <Text my={0}>-</Text>
-              <DateTimePicker
-                value={toDate}
-                onChange={setToDate}
-                placeholder="End Date"
-                size="xs"
-                {...DATE_PROPS}
-              />
-            </Group>
-          </>
-        )}
         <TextInput
-          value={searchQ}
-          onChange={(e) => setSearchQ(e.target.value)}
+          value={state.searchQ}
+          onChange={(e) => updateState({ searchQ: e.target.value})}
           placeholder="Search by name"
           maw={rem(200)}
           label="Student Search"
           mt={rem(10)}
         />
-        <Divider mt={rem(16)} />
-        <Group gap={rem(8)}>
-          <ActionIcon
-            variant="outline"
-            color="blue"
-            radius="lg"
-            onClick={() => studentsQ.refetch()}
-            loading={studentsQ.isFetching}
-          >
-            <IconReload size="20" />
-          </ActionIcon>
-          <Text size="sm" c="gray.6">
-            Reload students
-          </Text>
-        </Group>
-        <Divider mb={rem(14)} />
-        <Stack gap={rem(10)}>
-          <Button bg="yellow" onClick={() => setVidsOpened(true)}>
-            Open Tentative Videos
-          </Button>
-          <Button onClick={() => setSpManagerOpened(true)}>
-            Manage Senior Privileges
-          </Button>
-          <Button bg="red" onClick={forceReset}>
-            Force Reset
-          </Button>
-        </Stack>
-        <Divider my={rem(14)} />
-        <Text m={0} c="gray.6">
-          Senior year: {seniorYearQ.data ?? "Fetching..."}
-        </Text>
+        <Divider mt={rem(16)} mb={rem(10)} color="gray.6" />
+        {sidebarContent}
       </AppShell.Navbar>
 
       <AppShell.Main mih="calc(100vh - 20px)">
-        <Title order={4} c="gray.7" mb={rem(8)}>
-          Students with
-          {mode == SP_MODE ? " Senior Privileges" : ` ${mode} Block Free`}
-        </Title>
-        <Divider mb={rem(16)} />
-        <Group
-          align="flex-start"
-          grow
-          style={{ height: "calc(100vh - 150px)" }}
-        >
-          {mode === SP_MODE && (
-            <ColumnPanel
-              title={"Checked Out"}
-              color="red"
-              students={findStudents("checked_out")}
-              {...defaultColProps}
-            />
-          )}
-          <ColumnPanel
-            title={"Checked In"}
-            color="green"
-            students={findStudents("checked_in")}
-            {...defaultColProps}
-          />
-          <ColumnPanel
-            title={mode === SP_MODE ? "Tentative(Out)" : "Tentative"}
-            color="yellow"
-            students={findStudents(
-              mode === SP_MODE ? "tentative_out" : "tentative",
-            )}
-            {...defaultColProps}
-          />
-          {mode === SP_MODE ? (
-            <ColumnPanel
-              title="Tentative(In)"
-              color="yellow"
-              students={findStudents("tentative_in")}
-              {...defaultColProps}
-            />
-          ) : (
-            <ColumnPanel
-              title="Absent"
-              color="red"
-              students={findStudents("nothing")}
-              {...defaultColProps}
-            />
-          )}
-        </Group>
+        {state.mode === "town_hall" ? (
+          <Group align="flex-start" grow style={{ height: "calc(100vh - 100px)" }}>
+            {/* Left: Student Panels (half width, smaller) */}
+            <Stack style={{ width: "50%", minWidth: 0, height: "100%" }} gap={0}>
+              <Group justify="space-between">
+                <Title order={4}>{titles[state.mode]}</Title>
+                <Group gap={rem(4)} m={0}>
+                  <ActionIcon
+                    variant="outline"
+                    color="blue"
+                    radius="lg"
+                    onClick={() => studentsQ.refetch()}
+                    loading={studentsQ.isFetching}
+                    size="sm"
+                  >
+                    <IconReload size="16" />
+                  </ActionIcon>
+                  <Text size="xs" c="gray.6">
+                    Reload
+                  </Text>
+                </Group>
+              </Group>
+              <Divider mb={rem(16)} color="gray.6" />
+              <Group align="flex-start" grow h="100%">
+                <ColumnPanel
+                  title={"Checked In"}
+                  color="green"
+                  students={findStudents("checked_in")}
+                  {...defaultColProps}
+                />
+                <ColumnPanel
+                  title={"Absent"}
+                  color="red"
+                  students={findStudents("nothing")}
+                  {...defaultColProps}
+                />
+              </Group>
+            </Stack>
+            {/* Right: Town Hall Meeting Management */}
+            <Paper style={{ width: "50%", minWidth: 0, height: "100%", display: "flex", flexDirection: "column" }} p="md">
+              <Title order={2} mb={rem(12)}>
+                Town Hall Meetings
+              </Title>
+              {meetingsQ.isPending ? (
+                <Loader />
+              ) : meetingsQ.isError ? (
+                <Text c="red">Error loading meetings.</Text>
+              ) : meetingsQ.data.length === 0 ? (
+                <Text c="gray.6">No meetings found.</Text>
+              ) : (
+                <Stack gap={rem(10)}>
+                  {meetingsQ.data.map((meeting, idx) => (
+                    <Stack 
+                      style={{ 
+                        flex: 1, 
+                        border: "1px solid var(--mantine-color-gray-6)", 
+                        borderRadius: 8
+                      }} 
+                      gap={rem(5)}
+                      key={meeting.code + idx} 
+                      p={rem(10)}
+                    >
+                      <Group>
+                        <Title order={4}>{meeting.title}</Title>
+                        <Button 
+                          color="red" 
+                          size="sm" 
+                          variant="light" 
+                          ml="auto"
+                          onClick={async () => {
+                            const isGood = window.confirm("Are you sure you want to delete this meeting?")
+                            if (!isGood) return
+                            const resp = await fetchBackend(`/checkin/townHallMeeting/delete/?code=${meeting.code}`, {
+                              method: "DELETE",
+                              credentials: "include"
+                            })
+                            if (resp.status === 200) {
+                              window.alert("Town Hall Meeting was successfully deleted.")
+                              meetingsQ.refetch()
+                            } else if (resp.status === 400) {
+                              window.alert((await resp.json()).msg)
+                            } else {
+                              window.alert("Invalid Status: " + resp.status)
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </Group>
+                      <Text my={0}><b>Start:</b> {dayjs(meeting.start).format("YYYY-MM-DD hh:mm A [EST]")}</Text>
+                      <Text my={0}><b>End:</b> {dayjs(meeting.end).format("YYYY-MM-DD hh:mm A [EST]")}</Text>
+                      <Group gap={rem(6)}>
+                        <Text size="lg" my={0}><b>Code:</b> {state.showCodes[meeting.code] ? meeting.code : "••••••••"}</Text>
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={() => updateState({ 
+                            showCodes: { 
+                              ...state.showCodes, 
+                              [meeting.code]: !state.showCodes[meeting.code] 
+                            } 
+                          })}
+                          aria-label={state.showCodes[meeting.code] ? "Hide code" : "Show code"}
+                        >
+                          {state.showCodes[meeting.code] ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+                        </ActionIcon>
+                      </Group>
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
+            </Paper>
+          </Group>
+        ) : (
+          <>
+            <Group justify="space-between">
+              <Title order={4} c="gray.7">{titles[state.mode]}</Title>
+              <Group gap={rem(8)} m={0}>
+                <ActionIcon
+                  variant="outline"
+                  color="blue"
+                  radius="lg"
+                  onClick={() => studentsQ.refetch()}
+                  loading={studentsQ.isFetching}
+                >
+                  <IconReload size="20" />
+                </ActionIcon>
+                <Text size="sm" c="gray.6">
+                  Reload
+                </Text>
+              </Group>
+            </Group>
+            <Divider mb={rem(16)} color="gray.6" />
+            <Group
+              align="flex-start"
+              grow
+              style={{ height: "calc(100vh - 170px)" }}
+            >
+              {state.mode === "senior_privileges" && (
+                <ColumnPanel
+                  title={"Checked Out"}
+                  color="red"
+                  students={findStudents("checked_out")}
+                  {...defaultColProps}
+                />
+              )}
+              <ColumnPanel
+                title={"Checked In"}
+                color="green"
+                students={findStudents("checked_in")}
+                {...defaultColProps}
+              />
+              <ColumnPanel
+                title={state.mode === "senior_privileges" ? "Tentative(Out)" : "Tentative"}
+                color="yellow"
+                students={findStudents(
+                  state.mode === "senior_privileges" ? "tentative_out" : "tentative",
+                )}
+                {...defaultColProps}
+              />
+              {state.mode === "senior_privileges" ? (
+                <ColumnPanel
+                  title="Tentative(In)"
+                  color="yellow"
+                  students={findStudents("tentative_in")}
+                  {...defaultColProps}
+                />
+              ) : (
+                <ColumnPanel
+                  title="Absent"
+                  color="red"
+                  students={findStudents("nothing")}
+                  {...defaultColProps}
+                />
+              )}
+            </Group>
+          </>
+        )}
       </AppShell.Main>
 
       <EvidencePlayer
-        opened={vidsOpened}
+        opened={state.vidsOpened}
         onClose={() => {
           studentsQ.refetch();
-          setVidsOpened(false);
+          updateState({ vidsOpened: false })
         }}
-        freeBlock={mode}
+        freeBlock={state.freePeriod}
         students={findStudents("tentative")}
       />
 
       <ManageSeniorPrivileges
-        opened={spManagerOpened}
-        onClose={() => setSpManagerOpened(false)}
+        opened={state.spManagerOpened}
+        onClose={() => updateState({ spManagerOpened: false })}
       />
     </AppShell>
   );
 }
 
-export async function forceReset() {
+async function forceReset() {
   const confirmation = window.prompt("Type 'YES' if you want to force reset.");
   if (confirmation !== "YES") {
     window.alert("Operation was cancelled.");
@@ -336,6 +576,7 @@ export async function forceReset() {
   }
   const res = await fetchBackend("/checkin/forceReset/", {
     credentials: "include",
+    method: "POST"
   });
   if (res.ok) {
     window.alert("Reset successful");
@@ -347,9 +588,9 @@ export async function forceReset() {
 function ColumnPanel(props: {
   title: string;
   color: string;
-  students: any[];
+  students: Student[];
   hasCheckbox: boolean;
-  checked: (name: string) => boolean;
+  isChecked: (name: string) => boolean;
   setChecked: (checked: boolean, name: string) => void;
 }) {
   return (
@@ -378,7 +619,7 @@ function ColumnPanel(props: {
               key={student + idx}
               name={student.name}
               hasCheckbox={props.hasCheckbox}
-              checked={props.checked(student.name)}
+              checked={props.isChecked(student.name)}
               setChecked={(c) => props.setChecked(c, student.name)}
               dateStr={student.date_str}
             />

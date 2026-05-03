@@ -96,3 +96,8 @@ class AdviseeNotFound(Http400):
 class AdviseeAlreadyHasAdvisor(Http400):
     def __init__(self, advisor_name: str):
         super().__init__(13, "This advisee already has an advisor (" + advisor_name + ").")
+
+
+class NoTownHallMeetingAvailable(Http400):
+    def __init__(self):
+        super().__init__(14, "No town hall meeting is currently available.")

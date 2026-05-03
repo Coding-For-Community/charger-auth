@@ -17,6 +17,7 @@ import { Route as LoginDefaultRouteImport } from './routes/login/Default'
 import { Route as LoginAdminLoginRouteImport } from './routes/login/AdminLogin'
 
 const WelcomeLazyRouteImport = createFileRoute('/Welcome')()
+const TownHallManagerLazyRouteImport = createFileRoute('/TownHallManager')()
 const KioskPageLazyRouteImport = createFileRoute('/KioskPage')()
 const GeoLocationTestLazyRouteImport = createFileRoute('/GeoLocationTest')()
 const AdvisorDashboardLazyRouteImport = createFileRoute('/AdvisorDashboard')()
@@ -33,6 +34,13 @@ const WelcomeLazyRoute = WelcomeLazyRouteImport.update({
   path: '/Welcome',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/Welcome.lazy').then((d) => d.Route))
+const TownHallManagerLazyRoute = TownHallManagerLazyRouteImport.update({
+  id: '/TownHallManager',
+  path: '/TownHallManager',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/TownHallManager.lazy').then((d) => d.Route),
+)
 const KioskPageLazyRoute = KioskPageLazyRouteImport.update({
   id: '/KioskPage',
   path: '/KioskPage',
@@ -99,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/AdvisorDashboard': typeof AdvisorDashboardLazyRoute
   '/GeoLocationTest': typeof GeoLocationTestLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
+  '/TownHallManager': typeof TownHallManagerLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
   '/login/AdminLogin': typeof LoginAdminLoginRoute
   '/login/Default': typeof LoginDefaultRoute
@@ -112,6 +121,7 @@ export interface FileRoutesByTo {
   '/AdvisorDashboard': typeof AdvisorDashboardLazyRoute
   '/GeoLocationTest': typeof GeoLocationTestLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
+  '/TownHallManager': typeof TownHallManagerLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
   '/login/AdminLogin': typeof LoginAdminLoginRoute
   '/login/Default': typeof LoginDefaultRoute
@@ -126,6 +136,7 @@ export interface FileRoutesById {
   '/AdvisorDashboard': typeof AdvisorDashboardLazyRoute
   '/GeoLocationTest': typeof GeoLocationTestLazyRoute
   '/KioskPage': typeof KioskPageLazyRoute
+  '/TownHallManager': typeof TownHallManagerLazyRoute
   '/Welcome': typeof WelcomeLazyRoute
   '/login/AdminLogin': typeof LoginAdminLoginRoute
   '/login/Default': typeof LoginDefaultRoute
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/AdvisorDashboard'
     | '/GeoLocationTest'
     | '/KioskPage'
+    | '/TownHallManager'
     | '/Welcome'
     | '/login/AdminLogin'
     | '/login/Default'
@@ -154,6 +166,7 @@ export interface FileRouteTypes {
     | '/AdvisorDashboard'
     | '/GeoLocationTest'
     | '/KioskPage'
+    | '/TownHallManager'
     | '/Welcome'
     | '/login/AdminLogin'
     | '/login/Default'
@@ -167,6 +180,7 @@ export interface FileRouteTypes {
     | '/AdvisorDashboard'
     | '/GeoLocationTest'
     | '/KioskPage'
+    | '/TownHallManager'
     | '/Welcome'
     | '/login/AdminLogin'
     | '/login/Default'
@@ -181,6 +195,7 @@ export interface RootRouteChildren {
   AdvisorDashboardLazyRoute: typeof AdvisorDashboardLazyRoute
   GeoLocationTestLazyRoute: typeof GeoLocationTestLazyRoute
   KioskPageLazyRoute: typeof KioskPageLazyRoute
+  TownHallManagerLazyRoute: typeof TownHallManagerLazyRoute
   WelcomeLazyRoute: typeof WelcomeLazyRoute
   LoginAdminLoginRoute: typeof LoginAdminLoginRoute
   LoginDefaultRoute: typeof LoginDefaultRoute
@@ -195,6 +210,13 @@ declare module '@tanstack/react-router' {
       path: '/Welcome'
       fullPath: '/Welcome'
       preLoaderRoute: typeof WelcomeLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/TownHallManager': {
+      id: '/TownHallManager'
+      path: '/TownHallManager'
+      fullPath: '/TownHallManager'
+      preLoaderRoute: typeof TownHallManagerLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/KioskPage': {
@@ -277,6 +299,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdvisorDashboardLazyRoute: AdvisorDashboardLazyRoute,
   GeoLocationTestLazyRoute: GeoLocationTestLazyRoute,
   KioskPageLazyRoute: KioskPageLazyRoute,
+  TownHallManagerLazyRoute: TownHallManagerLazyRoute,
   WelcomeLazyRoute: WelcomeLazyRoute,
   LoginAdminLoginRoute: LoginAdminLoginRoute,
   LoginDefaultRoute: LoginDefaultRoute,

@@ -1,11 +1,8 @@
-from ninja.errors import HttpError
-from django.http import HttpResponse
-
-from checkin.core.consts import AdvisorRequest
 import os
 
 from asgiref.sync import sync_to_async
 from bitfield import BitField
+from checkin.core.consts import AdvisorRequest
 from django.contrib.auth.models import User
  
 from checkin.core.consts import (ALL_FREE_BLOCKS, EVERYONE_KW, US_EASTERN, FreeBlock)
@@ -121,19 +118,28 @@ class SeniorPrivilegeCheckIn(models.Model):
         }
 
 
-class TownHallCheckIn(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    device_id = models.CharField(max_length=32)
-    timestamp = models.DateTimeField(auto_now_add=True)
+def generate_town_hall_code():
+    import uuid
+    from datetime import datetime
+
+    return "town_hall_code_" + str(uuid.uuid4()) + str(datetime.now()).strip()
 
 
-class TownHallMeetingToday(models.Model):
+class TownHallMeeting(models.Model):
     """
     Represents a new Town hall meeting.
     """
 
     start = models.DateTimeField()
     end = models.DateTimeField()
+    code = models.CharField(max_length=10, default=generate_town_hall_code)
+    title = models.CharField(max_length=100, default="Unnamed Town Hall Meeting")
+
+
+class TownHallCheckIn(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    device_id = models.CharField(max_length=32)
+    meeting = models.ForeignKey(TownHallMeeting, on_delete=models.CASCADE)
 
 
 class FreeBlockToday(models.Model):

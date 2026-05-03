@@ -2,10 +2,12 @@
 Stores the main free period check-in endpoints.
 """
 
+from checkin.core.errors import NoTownHallMeetingAvailable
+from checkin.schema import TownHallSignInSchema
 from cryptography.utils import Enum
 from checkin.core.consts import TEACHER_MONITORED_KIOSK, AdvisorRequest
 from checkin.core.consts import KIOSK
-from checkin.schema import AdvisorLoginSchema, SingleStudentEmail
+from checkin.schema import AdvisorLoginSchema, SingleStudentEmail, CreateTownHallMeetingSchema
 import asyncio
 import logging
 import random
@@ -45,7 +47,7 @@ from checkin.models import (
     Student,
     FreePeriodCheckIn,
     SeniorPrivilegeCheckIn,
-    SeniorPrivilegesBan, Advisor,
+    SeniorPrivilegesBan, Advisor, TownHallMeeting,
 )
 from checkin.schema import (
     CheckInSchema,
@@ -103,19 +105,19 @@ async def fetch_students(request):
         async for student in Student.objects.all()
     ]
 
-@router.get("/students/{free_block}/")
-async def fetch_students_by_free_period(request, free_block: FreeBlock):
-    if free_block not in ALL_FREE_BLOCKS:
+@router.get("/students/FP/{free_period}/")
+async def fetch_students_by_free_period(request, free_period: FreeBlock):
+    if free_period not in ALL_FREE_BLOCKS:
         return InvalidFreeBlock()
     output = []
     records_prefetch = Prefetch(
         "fp_records",
         queryset=FreePeriodCheckIn.objects.filter(
-            free_block_idx=ALL_FREE_BLOCKS.index(free_block)
+            free_block_idx=ALL_FREE_BLOCKS.index(free_period)
         ),
         to_attr="fp_records_filtered",
     )
-    students = Student.objects.filter(free_blocks=Student.as_bit_str(free_block))
+    students = Student.objects.filter(free_blocks=Student.as_bit_str(free_period))
     students = students.prefetch_related(records_prefetch)
     async for student in students.all():
         records: list[FreePeriodCheckIn] = student.fp_records_filtered
@@ -129,7 +131,7 @@ async def fetch_students_by_free_period(request, free_block: FreeBlock):
     return output
 
 
-@router.get("/spStudents/")
+@router.get("/students/SP/")
 async def fetch_sp_students(request, from_date=None, to_date=None):
     from_date = fmt_eastern_date(from_date)
     to_date = fmt_eastern_date(to_date)
@@ -249,6 +251,15 @@ async def login(request: HttpRequest, data: AdminLoginSchema | AdvisorLoginSchem
 @router.post("/logout/")
 async def logout(request: HttpRequest):
     await alogout(request)
+
+
+@router.get("/perms/")
+async def perms(request: HttpRequest):
+    user = await request.auser()
+    return {
+        "isAdmin": user.is_superuser,
+        "teacherMonitored": user.username == TEACHER_MONITORED_KIOSK,
+    }
 
 
 @router.get("/allSeniors/")
@@ -399,6 +410,64 @@ async def all_advisors(request):
         { "name": advisor.name, "email": (await advisor.auser()).email }
         async for advisor in advisors
     ]
+
+@router.get("/townHallMeeting/all/")
+async def all_town_hall_meetings(request):
+    if not await is_kiosk(request):
+        return HttpResponse(status=403)
+    return [
+        {
+            "start": meeting.start.isoformat(),
+            "end": meeting.end.isoformat(),
+            "code": meeting.code,
+            "title": meeting.title
+        }
+        async for meeting in TownHallMeeting.objects.all()
+    ]
+
+
+@router.get("/townHallMeeting/code/")
+async def town_hall_qr_code(request):
+    if not await is_kiosk(request):
+        return HttpResponse(status=403)
+    now = get_now()
+    meeting = await TownHallMeeting.objects.filter(start__gt=now, end__lt=now).afirst()
+    return { "code": meeting.code if meeting else None }
+
+
+@router.post("/townHallMeeting/create/")
+async def create_town_hall_meeting(request, data: CreateTownHallMeetingSchema):
+    if not await is_kiosk(request):
+        return HttpResponse(status=403)
+    if data.start < get_now():
+        return HttpResponse("Start time must be in the future", status=400)
+    if data.end < data.start:
+        return HttpResponse("End time must be after start time", status=400)
+    if await TownHallMeeting.objects.filter(start__date=data.start.date(), end__date=data.end.date()).afirst():
+        return HttpResponse("There is already a meeting in this timeframe", status=400)
+    meeting = TownHallMeeting(start=data.start, end=data.end, title=data.title)
+    await meeting.asave()
+    return { "code": meeting.code }
+
+
+@router.delete("/townHallMeeting/delete/")
+async def delete_town_hall_meeting(request, code: str):
+    if not await is_kiosk(request):
+        return HttpResponse(status=403)
+    await TownHallMeeting.objects.filter(code=code).adelete()
+    return {"success": True}
+
+
+@router.post("/townHallMeeting/signIn/")
+async def sign_in_to_town_hall(request, data: TownHallSignInSchema):
+    now = get_now()
+    meeting, student = await asyncio.gather(
+        TownHallMeeting.objects.filter(start__gt=now, end__lt=now).afirst(),
+        Student.objects.filter(email=data.student_email).afirst(),
+    )
+    if meeting is None:
+        return NoTownHallMeetingAvailable()
+
 
 if settings.DEBUG:
     @router.get("/apiForward/{path:route}")
