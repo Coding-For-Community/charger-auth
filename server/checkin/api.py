@@ -2,6 +2,8 @@
 Stores the main free period check-in endpoints.
 """
 
+from checkin.core.errors import EndTimeBeforeStartTime, MeetingAlreadyExists
+from checkin.core.errors import StartTimeNotInFuture
 from checkin.core.errors import NoTownHallMeetingAvailable
 from checkin.schema import TownHallSignInSchema
 from cryptography.utils import Enum
@@ -440,11 +442,11 @@ async def create_town_hall_meeting(request, data: CreateTownHallMeetingSchema):
     if not await is_kiosk(request):
         return HttpResponse(status=403)
     if data.start < get_now():
-        return HttpResponse("Start time must be in the future", status=400)
+        return StartTimeNotInFuture()
     if data.end < data.start:
-        return HttpResponse("End time must be after start time", status=400)
+        return EndTimeBeforeStartTime()
     if await TownHallMeeting.objects.filter(start__date=data.start.date(), end__date=data.end.date()).afirst():
-        return HttpResponse("There is already a meeting in this timeframe", status=400)
+        return MeetingAlreadyExists()
     meeting = TownHallMeeting(start=data.start, end=data.end, title=data.title)
     await meeting.asave()
     return { "code": meeting.code }

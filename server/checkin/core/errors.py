@@ -101,3 +101,15 @@ class AdviseeAlreadyHasAdvisor(Http400):
 class NoTownHallMeetingAvailable(Http400):
     def __init__(self):
         super().__init__(14, "No town hall meeting is currently available.")
+
+class StartTimeNotInFuture(Http400):
+    def __init__(self):
+        super().__init__(15, "Start time must be in the future.")
+
+class EndTimeBeforeStartTime(Http400):
+    def __init__(self):
+        super().__init__(16, "End time must be after start time.")
+
+class MeetingAlreadyExists(Http400):
+    def __init__(self):
+        super().__init__(17, "There is already a meeting in this timeframe.")

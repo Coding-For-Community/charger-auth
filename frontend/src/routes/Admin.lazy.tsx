@@ -1,4 +1,6 @@
 import "@mantine/dates/styles.css";
+import { QRCodeSVG } from "qrcode.react";
+import { useRef } from "react";
 
 import {
   ActionIcon,
@@ -30,10 +32,9 @@ import { useCheckedStudents } from "../api/checkedStudents.ts";
 import { fetchBackend } from "../api/fetchBackend.ts";
 import { useAdminLoginRedirect } from "../api/perms.ts";
 import { EvidencePlayer } from "../components/EvidencePlayer.tsx";
-import { IconReload } from "../components/icons.tsx";
+import { IconEye, IconEyeOff, IconReload } from "../components/icons.tsx";
 import { ManageSeniorPrivileges } from "../components/ManageSeniorPrivileges.tsx";
 import { usePartialState } from "../utils/usePartialState.ts";
-import { IconEye, IconEyeOff } from "../components/icons.tsx";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -44,6 +45,7 @@ export const Route = createLazyFileRoute("/Admin")({
 
 type Mode = "free_period" | "senior_privileges" | "town_hall"
 type Student = z.infer<typeof StudentSchema>
+type TownHallMeeting = z.infer<typeof TownHallMeetingSchema>
 
 const StudentSchema = z.object({
   name: z.string(),
@@ -153,6 +155,60 @@ function Admin() {
       }
     }
   })
+  const qrRefs = useRef<{ [code: string]: HTMLDivElement | null }>({
+  });
+
+  // Helper to print QR code for a meeting
+  function handlePrintQR(meeting: TownHallMeeting) {
+    const qrDiv = qrRefs.current[meeting.code];
+    if (!qrDiv) {
+      window.alert("QR code not found.");
+      return;
+    }
+    const printWindow = window.open("", "_blank", "width=800,height=600");
+    if (!printWindow) {
+      window.alert("Could not open print window.");
+      return;
+    }
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Print QR Code</title>
+          <style>
+            body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .qr-title { font-size: 4em; margin-bottom: 16px; }
+            .qr-title-small { font-size: 2em; margin-bottom: 16px; }
+            .qr-code { margin-bottom: 16px; }
+            .qr-meta { font-size: 1.5em; color: #444; }
+            @media screen {
+              .print-only { display: none; } /* Hidden on screen */
+            }
+            @media print {
+              .print-only { display: block; } /* Visible in print */
+            }
+          </style>
+          <script>
+            window.onafterprint = function() { window.close(); };
+            window.onbeforeunload = function() { window.close(); };
+          </script>
+        </head>
+        <body>
+          <div class="print-only">
+            <div class="${meeting.title.length >= 22 ? "qr-title-small" : "qr-title"}">
+              ${meeting.title}
+            </div>
+            <div class="qr-code">${qrDiv.innerHTML}</div>
+            <div class="qr-meta"><b>Start:</b> ${dayjs(meeting.start).format("YYYY-MM-DD hh:mm A [EST]")}</div>
+            <div class="qr-meta"><b>End:</b> ${dayjs(meeting.end).format("YYYY-MM-DD hh:mm A [EST]")}</div>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    // Wait for QR SVG to render, then print
+    setTimeout(() => printWindow.print(), 300);
+  }
 
   function searched(student: Student) {
     return (
@@ -268,8 +324,9 @@ function Admin() {
     case "town_hall":
       sidebarContent = (
         <>
+          <Title order={4} mb={rem(10)}>Meeting Creation</Title>
           <TextInput
-            label="Meeting Title"
+            label="Title"
             value={state.townHallMeetTitle}
             onChange={e => updateState({ townHallMeetTitle: e.currentTarget.value})}
             placeholder="Enter meeting title"
@@ -422,22 +479,22 @@ function Admin() {
               ) : (
                 <Stack gap={rem(10)}>
                   {meetingsQ.data.map((meeting, idx) => (
-                    <Stack 
-                      style={{ 
-                        flex: 1, 
-                        border: "1px solid var(--mantine-color-gray-6)", 
+                    <Stack
+                      style={{
+                        flex: 1,
+                        border: "1px solid var(--mantine-color-gray-6)",
                         borderRadius: 8
-                      }} 
+                      }}
                       gap={rem(5)}
-                      key={meeting.code + idx} 
+                      key={meeting.code + idx}
                       p={rem(10)}
                     >
                       <Group>
                         <Title order={4}>{meeting.title}</Title>
-                        <Button 
-                          color="red" 
-                          size="sm" 
-                          variant="light" 
+                        <Button
+                          color="red"
+                          size="sm"
+                          variant="light"
                           ml="auto"
                           onClick={async () => {
                             const isGood = window.confirm("Are you sure you want to delete this meeting?")
@@ -458,7 +515,30 @@ function Admin() {
                         >
                           Delete
                         </Button>
+                        <Button
+                          color="gray"
+                          c="gray.8"
+                          size="sm"
+                          variant="outline"
+                          ml={rem(8)}
+                          onClick={() => handlePrintQR(meeting)}
+                        >
+                          Print QR Code
+                        </Button>
                       </Group>
+                      {/* Hidden QR code for printing */}
+                      <div
+                        ref={el => {
+                          qrRefs.current[meeting.code] = el;
+                        }}
+                        style={{ display: "none" }}
+                        aria-hidden="true"
+                      >
+                        <QRCodeSVG
+                          value={`https://coding-for-community.github.io/charger-auth/#/CheckInPage?meetingCode=${meeting.code}`}
+                          size={512}
+                        />
+                      </div>
                       <Text my={0}><b>Start:</b> {dayjs(meeting.start).format("YYYY-MM-DD hh:mm A [EST]")}</Text>
                       <Text my={0}><b>End:</b> {dayjs(meeting.end).format("YYYY-MM-DD hh:mm A [EST]")}</Text>
                       <Group gap={rem(6)}>
@@ -466,11 +546,11 @@ function Admin() {
                         <ActionIcon
                           variant="subtle"
                           color="gray"
-                          onClick={() => updateState({ 
-                            showCodes: { 
-                              ...state.showCodes, 
-                              [meeting.code]: !state.showCodes[meeting.code] 
-                            } 
+                          onClick={() => updateState({
+                            showCodes: {
+                              ...state.showCodes,
+                              [meeting.code]: !state.showCodes[meeting.code]
+                            }
                           })}
                           aria-label={state.showCodes[meeting.code] ? "Hide code" : "Show code"}
                         >
