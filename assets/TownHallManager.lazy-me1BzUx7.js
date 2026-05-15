@@ -1,0 +1,1 @@
+import{k as e,s as t}from"./index-BGQI-af2.js";var n=e(),r=t(`/TownHallManager`)({component:i});function i(){return(0,n.jsx)(`div`,{children:`Hello "/TownHallManager"!`})}export{r as Route};
