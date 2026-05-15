@@ -1,0 +1,1 @@
+var e=`http://127.0.0.1:8001`,t=`notifsEnabled`;function n(t,n){return fetch(e+t,{...n??{},headers:{...n?.headers??{},"ngrok-skip-browser-warning":`1`}})}export{t as n,n as t};
