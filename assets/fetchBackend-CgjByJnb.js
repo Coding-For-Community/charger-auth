@@ -1,0 +1,1 @@
+var e=`https://crack-monkfish-monthly.ngrok-free.app`,t=`notifsEnabled`;function n(t,n){return fetch(e+t,{...n??{},headers:{...n?.headers??{},"ngrok-skip-browser-warning":`1`}})}export{t as n,n as t};
